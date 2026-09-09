@@ -4,7 +4,8 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui',
     '@vueuse/nuxt',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    '@pinia/nuxt'
   ],
 
   devtools: {
@@ -12,6 +13,11 @@ export default defineNuxtConfig({
   },
 
   css: ['~/assets/css/main.css'],
+
+  colorMode: {
+    preference: 'light',
+    fallback: 'light'
+  },
 
   routeRules: {
     '/': { prerender: true }
@@ -26,5 +32,9 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  pinia: {
+    storesDirs: ['./app/stores/**']
   }
 })
