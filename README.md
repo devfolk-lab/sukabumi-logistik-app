@@ -1,64 +1,65 @@
-# Nuxt Starter Template
+# Sukabumi Logistik
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+Sukabumi Logistik is a multi-ekspedisi shipping app: pengguna dapat mengirim
+paket lewat beberapa mitra kurir, melacak status pengiriman, meninjau riwayat
+pesanan, dan mengelola alamat tersimpan serta profil akun mereka.
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+This repository is a Nuxt 4 port of an HTML/CSS/JS prototype into a typed,
+component-driven, store-backed application.
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+## Stack
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png" width="830" height="466">
-  </picture>
-</a>
+- [Nuxt 4](https://nuxt.com) + Vue 3 (`<script setup>`, Composition API)
+- [Nuxt UI](https://ui.nuxt.com) for form controls, badges, tabs and toasts
+- [Pinia](https://pinia.vuejs.org) for in-memory domain stores (orders,
+  shipments, addresses, couriers, auth, booking)
+- [Tailwind CSS v4](https://tailwindcss.com) with a small custom theme
+  (`app/assets/css/main.css`) for brand tokens, shadows and the ripple effect
+- [Vitest](https://vitest.dev) for store unit tests
+- TypeScript throughout, checked with `vue-tsc`
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+## Getting started
 
-## Quick Start
-
-```bash [Terminal]
-npm create nuxt@latest -- -t ui
-```
-
-## Deploy your own
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
-
-## Setup
-
-Make sure to install the dependencies:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Run the dev server at `http://localhost:3000`:
 
 ```bash
 pnpm dev
 ```
 
-## Production
-
-Build the application for production:
+Build for production:
 
 ```bash
 pnpm build
 ```
 
-Locally preview production build:
+## Quality checks
 
 ```bash
-pnpm preview
+pnpm lint       # eslint
+pnpm typecheck  # nuxt typecheck (vue-tsc)
+pnpm test       # vitest
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Project structure
 
-## Renovate integration
+- `app/pages/` — routes (auth flow, home, kirim wizard, lacak, riwayat,
+  alamat, profil)
+- `app/components/` — page-scoped components, grouped by feature directory
+  (`kirim/`, `mitra/`, `riwayat/`, `lacak/`, `alamat/`, `home/`, `app/` for
+  shell chrome)
+- `app/stores/` — Pinia stores holding the app's in-memory dummy data
+- `app/types/` — shared domain types (`Order`, `Shipment`, `Address`, ...)
+- `app/composables/` — `useAppNav()` and other shared composables
+- `app/plugins/` — the `v-ripple` directive plugin
 
-Install [Renovate GitHub app](https://github.com/apps/renovate/installations/select_target) on your repository and you are good to go.
+## Reference material
+
+- `docs/superpowers/specs/` — the design spec this port was built from
+- `docs/superpowers/reference/mmbc-prototype.html` — the original static
+  HTML/CSS/JS prototype (markup source of truth for every screen)
