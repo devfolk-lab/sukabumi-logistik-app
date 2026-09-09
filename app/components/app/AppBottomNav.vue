@@ -8,7 +8,7 @@ const items = [
 const route = useRoute()
 
 function isActive(to: string): boolean {
-  return to === '/' ? route.path === '/' : route.path.startsWith(to)
+  return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
 }
 </script>
 

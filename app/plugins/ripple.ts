@@ -32,7 +32,8 @@ function spawn(el: HTMLElement, event: PointerEvent, dark: boolean): void {
 export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.vueApp.directive('ripple', {
     mounted(el: HTMLElement, binding) {
-      el.classList.add('relative', 'overflow-hidden')
+      el.style.position = 'relative'
+      el.style.overflow = 'hidden'
       el.addEventListener('pointerdown', (event: PointerEvent) => {
         spawn(el, event, Boolean(binding.modifiers.dark))
       })
