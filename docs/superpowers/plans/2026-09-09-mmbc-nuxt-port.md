@@ -292,7 +292,7 @@ In `nuxt.config.ts`, add `'@pinia/nuxt'` to `modules`, and add:
 
 ```ts
   colorMode: {
-    preferred: 'light',
+    preference: 'light',
     fallback: 'light'
   },
 
