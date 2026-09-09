@@ -1,0 +1,2981 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sukabumi Logistik</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @theme {
+            --color-primary: #002144;
+            --color-secondary: #d4a124;
+            --color-primary-light: #e8f0f8;
+            --color-secondary-light: #fdf6e3;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #f0f2f5; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Google Meet style ripple - apply the .ripple / .ripple-dark class to ANY
+           clickable / pressable element so it always gives tap feedback. A JS
+           listener (see the "Ripple effect" section in the script below) spawns
+           a .ripple-circle at the exact press point on pointerdown. While the
+           press is HELD, the circle grows and stays fully visible (it does not
+           fade on its own); only on release does it fade out and get removed. */
+        .ripple, .ripple-dark {
+            position: relative;
+            overflow: hidden;
+        }
+        .ripple-circle {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out;
+        }
+        .ripple-circle.grow {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .ripple-circle.release {
+            transition: transform 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 350ms ease-out;
+            opacity: 0;
+        }
+        .ripple .ripple-circle {
+            background: rgba(255, 255, 255, 0.45);
+        }
+        .ripple-dark .ripple-circle {
+            background: rgba(0, 33, 68, 0.12);
+        }
+        /* Hover state: a plain opacity/tint overlay (no ripple) that appears
+           while the pointer rests over the element, separate from the press
+           ripple above. Scoped to devices with a real pointer so a tap on
+           touchscreens never leaves this "stuck on" afterwards. */
+        @media (hover: hover) and (pointer: fine) {
+            .ripple::before, .ripple-dark::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                transition: opacity 150ms ease;
+                pointer-events: none;
+            }
+            .ripple:hover::before {
+                background: rgba(255, 255, 255, 0.12);
+                opacity: 1;
+            }
+            .ripple-dark:hover::before {
+                background: rgba(0, 33, 68, 0.06);
+                opacity: 1;
+            }
+        }
+
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-field {
+            transition: all 0.2s ease;
+            border: 1.5px solid #e5e7eb;
+        }
+        .input-field:focus {
+            border-color: #002144;
+            box-shadow: 0 0 0 3px rgba(0, 33, 68, 0.06);
+        }
+
+        .card-shadow {
+            box-shadow: 0 2px 12px rgba(0, 33, 68, 0.06), 0 1px 4px rgba(0, 33, 68, 0.04);
+        }
+        .card-shadow-hover {
+            box-shadow: 0 4px 20px rgba(0, 33, 68, 0.08), 0 2px 8px rgba(0, 33, 68, 0.06);
+        }
+
+        .gradient-primary {
+            background: linear-gradient(135deg, #002144 0%, #003366 50%, #004080 100%);
+        }
+
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item.active {
+            color: #002144;
+        }
+        .nav-item.active .nav-icon {
+            background: #002144;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 33, 68, 0.25);
+        }
+
+        .mitra-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+        .mitra-card:hover { transform: translateY(-2px); }
+        .mitra-card.selected {
+            border-color: #002144;
+            background: #f0f7ff;
+            box-shadow: 0 8px 24px rgba(0, 33, 68, 0.12);
+        }
+
+        .tab-btn.active {
+            background: #002144;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 33, 68, 0.2);
+        }
+
+        .filter-btn-active {
+            background: #002144 !important;
+            color: #ffffff !important;
+            border-color: #002144 !important;
+        }
+        .filter-btn-active .filter-btn-icon {
+            color: #ffffff !important;
+        }
+
+        .switch-toggle {
+            appearance: none;
+            width: 50px; height: 28px;
+            background: #d1d5db;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .switch-toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px; height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 2px; left: 2px;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .switch-toggle:checked { background: #002144; }
+        .switch-toggle:checked::after { transform: translateX(22px); }
+
+        .fab {
+            box-shadow: 0 4px 16px rgba(0, 33, 68, 0.3);
+        }
+
+        .partner-badge {
+            transition: all 0.2s ease;
+        }
+        .partner-badge:active { transform: scale(0.92); }
+
+        .route-pill {
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+        }
+
+        .gold-accent {
+            color: #d4a124;
+        }
+        .gold-bg {
+            background: #d4a124;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        /* Riwayat detail - order status timeline */
+        .step-dot {
+            background: #e5e7eb;
+            color: #9ca3af;
+            font-size: 13px;
+            font-weight: 700;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .timeline-step.completed .step-dot {
+            background: #10b981;
+            color: #fff;
+        }
+        .step-line {
+            background: #e5e7eb;
+            transition: background 0.2s ease;
+        }
+        .step-line.completed {
+            background: #10b981;
+        }
+
+        .feature-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 9px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .price-tag {
+            background: linear-gradient(135deg, #002144 0%, #003366 100%);
+        }
+
+        /* Route dashed connector - a flex-grow segment between the two marker
+           dots/pins (see the "Marker spine" comment in the Route card), so it
+           always fills exactly the space between them and never overflows
+           past either icon regardless of address content height. */
+        .route-line-fill {
+            min-height: 20px;
+            background: repeating-linear-gradient(to bottom, #d1d5db 0, #d1d5db 6px, transparent 6px, transparent 12px);
+        }
+        /* Same idea, tuned for the dark/translucent hero background on the
+           Pilih Kurir route card. */
+        .route-line-fill-dark {
+            min-height: 14px;
+            background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.3) 0, rgba(255,255,255,0.3) 5px, transparent 5px, transparent 10px);
+        }
+
+        .expand-btn {
+            transition: all 0.2s ease;
+        }
+        .expand-btn .expand-chevron {
+            transition: transform 0.2s ease;
+        }
+        .expand-btn.rotated .expand-chevron {
+            transform: rotate(180deg);
+        }
+
+        .checkbox-custom {
+            appearance: none;
+            width: 22px; height: 22px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .checkbox-custom:checked {
+            background: #002144;
+            border-color: #002144;
+        }
+        .checkbox-custom:checked::after {
+            content: '';
+            position: absolute;
+            left: 6px; top: 2px;
+            width: 6px; height: 12px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE APP SHELL — DESKTOP ONLY (1024px+)
+           Mobile AND tablet share the exact same single-column phone-frame
+           design, on purpose — tablet just gets that same layout centered
+           on the wider viewport, no in-between "almost desktop" state.
+           Only real desktop widths (1024px+) switch on the sidebar and the
+           web-native treatment below.
+           ═══════════════════════════════════════════════════════════════ */
+        #sidebar {
+            display: none;
+            flex-direction: column;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            width: 17rem;
+            background: #ffffff;
+            border-right: 1px solid #f1f2f4;
+            z-index: 40;
+        }
+        @media (min-width: 1024px) { #sidebar { display: flex; } }
+
+        #main-col { width: 100%; }
+        @media (min-width: 1024px) { #main-col { margin-left: 17rem; width: calc(100% - 17rem); } }
+
+        #app-root.auth-mode #sidebar  { display: none !important; }
+        #app-root.auth-mode #main-col { margin-left: 0 !important; width: 100% !important; }
+
+        @media (min-width: 1024px) {
+            #frame { max-width: none !important; box-shadow: none !important; overflow: visible !important; }
+        }
+
+        /* True mobile renders naturally at full device width (no artificial
+           420px box) — the boxed "phone mockup" look is only reinstated for
+           tablet widths, where we deliberately reuse the mobile design
+           centered on the larger screen. */
+        @media (min-width: 768px) and (max-width: 1023.98px) {
+            #frame, .mobile-shell-width {
+                max-width: 420px !important;
+            }
+            #frame {
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                overflow: hidden;
+            }
+        }
+
+        /* Safety net: nothing on the page should ever cause a horizontal
+           scrollbar / bleed past the viewport edge. */
+        html, body { overflow-x: hidden; max-width: 100%; }
+
+        .sidenav-item { transition: background 0.15s ease, color 0.15s ease; }
+        .sidenav-item.active { background: #e8f0f8; color: #002144; }
+        .sidenav-item.active .sidenav-icon { background: #002144 !important; color: #fff !important; }
+
+        /* Header / content width-capping helpers, applied only at desktop */
+        .page-header {}
+        @media (min-width: 1024px) { .page-header { padding-left: 3rem; padding-right: 3rem; padding-top: 2rem; } }
+
+        .header-inner {}
+        @media (min-width: 1024px) { .header-inner { max-width: 64rem; margin-left: auto; margin-right: auto; } }
+
+        .page-content {}
+        @media (min-width: 1024px) { .page-content { max-width: 64rem; margin-left: auto; margin-right: auto; padding-left: 3rem; padding-right: 3rem; } }
+
+        /* Flatten the mobile "hero card" header into a plain web page-title
+           strip once the sidebar owns primary navigation — dropping the
+           rounded corners and floating blob decoration is what stops
+           desktop from reading as a stretched phone screen. */
+        @media (min-width: 1024px) {
+            .page-header.gradient-primary {
+                border-radius: 0 !important;
+                padding-top: 2.5rem !important;
+                padding-bottom: 2rem !important;
+            }
+            .page-header.gradient-primary > div[class*="absolute"] { display: none; }
+
+            /* Some headers (Pilih Kurir, Detail Pesanan, Riwayat Detail, Lacak
+               Detail) are pinned with position:sticky on mobile so they stay
+               visible while the page scrolls. On desktop, with a much taller
+               viewport and a sidebar for navigation, a permanently pinned
+               hero just eats vertical space and makes the content area feel
+               smaller — so it scrolls away normally instead. */
+            .page-header.sticky { position: static !important; }
+        }
+
+        .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; }
+        @media (min-width: 1024px) { .sticky-bar { left: 17rem; } }
+        #app-root.auth-mode .sticky-bar { left: 0 !important; }
+
+        /* On desktop the mobile "fixed bottom action bar" becomes a plain
+           inline, right-aligned button at the end of the content instead
+           of a bar glued to the browser edge — that fixed full-width bar
+           is a phone/checkout pattern, not a desktop one. */
+        @media (min-width: 1024px) {
+            .sticky-bar {
+                position: static;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                border-top: none !important;
+                padding: 0.5rem 0 3rem !important;
+            }
+            .sticky-bar .page-content { display: flex; align-items: center; justify-content: flex-end; gap: 1.25rem; }
+            .sticky-bar .page-content > * { margin-bottom: 0 !important; }
+            .sticky-bar button.w-full { width: auto !important; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; }
+            .sticky-bar #mitra-summary { flex: 1; }
+        }
+
+        /* List → grid conversions (mobile AND tablet stay a plain flex
+           column so we don't fight Tailwind's space-y-*; only desktop
+           turns these into a real multi-column grid) */
+        .grid-active-shipments, .grid-riwayat-list, .grid-mitra-list, .grid-addresses {
+            display: flex; flex-direction: column; gap: 0.75rem;
+        }
+        @media (min-width: 1024px) {
+            .grid-active-shipments, .grid-addresses { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+            .grid-riwayat-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+            .grid-mitra-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; align-items: start; }
+        }
+
+        @media (min-width: 1024px) { .mitra-filter-sticky { position: static; } }
+
+        /* Softer, flatter corners + shadows once the layout has real room
+           to breathe — very rounded, heavy-shadow cards read as a mobile
+           design language once they're spread across a wide screen. Cards
+           that are actually clickable (they carry an onclick) get a real
+           hover lift instead of the touch-only ripple. */
+        @media (min-width: 1024px) {
+            .card-shadow {
+                box-shadow: 0 1px 2px rgba(0, 33, 68, 0.05), 0 1px 4px rgba(0, 33, 68, 0.04);
+            }
+            .rounded-3xl { border-radius: 1.1rem !important; }
+            [onclick].card-shadow {
+                cursor: pointer;
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+            }
+            [onclick].card-shadow:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 28px rgba(0, 33, 68, 0.12);
+            }
+        }
+
+        /* Home page "Quick Actions" — on mobile/tablet this stays the
+           original centered icon-stack row; on desktop it becomes a real
+           4-up row of feature tiles (icon + label side by side), which
+           reads as a web dashboard shortcut bar instead of an app-launcher
+           icon grid. */
+        @media (min-width: 1024px) {
+            .qa-panel { background: transparent; box-shadow: none; padding: 0; border-radius: 0; }
+            .qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+            .qa-btn {
+                flex-direction: row; width: auto; justify-content: flex-start; align-items: center;
+                gap: 0.875rem; background: #fff; border-radius: 1rem; padding: 1rem 1.25rem;
+                box-shadow: 0 1px 2px rgba(0, 33, 68, 0.05), 0 1px 4px rgba(0, 33, 68, 0.04);
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+            }
+            .qa-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0, 33, 68, 0.12); }
+            .qa-icon { width: 2.75rem; height: 2.75rem; flex-shrink: 0; }
+            .qa-icon span { font-size: 1.125rem !important; }
+            .qa-label { font-size: 0.9375rem; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           AUTH SCREENS (Login / Register / Lupa Password)
+           Split layout only at desktop (1024px+); tablet keeps the same
+           single-column mobile layout as the rest of the app.
+           ═══════════════════════════════════════════════════════════════ */
+        .auth-shell { min-height: 100vh; display: flex; flex-direction: column; }
+        @media (min-width: 1024px) { .auth-shell { flex-direction: row; } }
+        .auth-brand { display: none; }
+        @media (min-width: 1024px) { .auth-brand { display: flex; flex: 0 0 40%; } }
+        .auth-form-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+        @media (min-width: 1024px) { .auth-form-wrap { padding: 3rem; } }
+
+        /* ═══════════════════════════════════════════════════════════════
+           VERTICAL PROGRESS TIMELINE (Lacak Pengiriman)
+           ═══════════════════════════════════════════════════════════════ */
+        .timeline-v-dot {
+            width: 2rem; height: 2rem; border-radius: 9999px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700;
+            background: #e5e7eb; color: #9ca3af;
+        }
+        .timeline-v-item.done .timeline-v-dot {
+            background: #10b981; color: #fff;
+        }
+        .timeline-v-item.current .timeline-v-dot {
+            background: #002144; color: #fff; box-shadow: 0 0 0 4px rgba(0,33,68,0.15);
+        }
+        .timeline-v-line { width: 2px; flex: 1; min-height: 1.5rem; background: #e5e7eb; margin: 0.25rem 0; }
+        .timeline-v-item.done .timeline-v-line { background: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div id="app-root" class="auth-mode">
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR (tablet / desktop navigation, hidden while logged out) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <aside id="sidebar" class="px-4 py-6 lg:px-6">
+        <div class="flex items-center gap-3 px-2 mb-8">
+            <div class="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+                <span class="text-white text-lg" aria-hidden="true">📦</span>
+            </div>
+            <div class="min-w-0">
+                <p class="font-extrabold text-gray-800 text-base leading-tight truncate">Sukabumi</p>
+                <p class="text-xs text-gray-400 font-bold tracking-wide truncate">LOGISTIK</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 space-y-1 overflow-y-auto hide-scrollbar">
+            <button data-section="home" onclick="goTo('home')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">🏠</span>
+                <span class="pointer-events-none">Beranda</span>
+            </button>
+            <button data-section="send" onclick="goTo('send')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">📦</span>
+                <span class="pointer-events-none">Kirim Paket</span>
+            </button>
+            <button data-section="lacak" onclick="goTo('lacak')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">📍</span>
+                <span class="pointer-events-none">Lacak Pengiriman</span>
+            </button>
+            <button data-section="riwayat" onclick="goTo('riwayat')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">🕑</span>
+                <span class="pointer-events-none">Riwayat</span>
+            </button>
+            <button data-section="alamat" onclick="goTo('alamat')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">📮</span>
+                <span class="pointer-events-none">Alamat Tersimpan</span>
+            </button>
+            <button data-section="profil" onclick="goTo('profil')" class="sidenav-item ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-500">
+                <span class="sidenav-icon w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">👤</span>
+                <span class="pointer-events-none">Profil</span>
+            </button>
+        </nav>
+
+        <div class="pt-4 mt-4 border-t border-gray-100 shrink-0">
+            <div class="flex items-center gap-3 px-2 mb-3">
+                <div class="w-9 h-9 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+                    <span class="text-primary text-sm" aria-hidden="true">👤</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-gray-800 truncate">Fulan</p>
+                    <p class="text-xs text-gray-400 truncate">fulan@email.com</p>
+                </div>
+            </div>
+            <button onclick="goTo('login')" class="ripple-dark w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500">
+                <span class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0" aria-hidden="true">🚪</span>
+                <span class="pointer-events-none">Keluar</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MAIN COLUMN -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="main-col">
+    <div id="frame" class="w-full bg-[#f8f9fb] min-h-screen relative mx-auto">
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: LOGIN -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-login" class="page active">
+            <div class="auth-shell">
+                <div class="auth-brand gradient-primary relative overflow-hidden flex-col justify-between p-10 lg:p-14">
+                    <div class="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="absolute bottom-0 left-0 w-56 h-56 bg-secondary/10 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                                <span class="text-white text-xl" aria-hidden="true">📦</span>
+                            </div>
+                            <p class="text-white font-extrabold text-lg tracking-tight">Sukabumi Logistik</p>
+                        </div>
+                        <h1 class="text-white text-3xl lg:text-4xl font-bold mt-10 leading-tight">Kirim & lacak paket ke seluruh Indonesia</h1>
+                        <p class="text-white/60 text-base mt-4 max-w-sm">Satu aplikasi untuk mengelola pengiriman lewat 9 mitra logistik terpercaya.</p>
+                    </div>
+                    <div class="relative z-10 space-y-4 mt-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><span class="text-white text-sm" aria-hidden="true">📍</span></div>
+                            <p class="text-white/80 text-sm font-medium">Lacak posisi paket secara real-time</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><span class="text-white text-sm" aria-hidden="true">🚚</span></div>
+                            <p class="text-white/80 text-sm font-medium">9+ mitra pengiriman dalam satu tempat</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><span class="text-white text-sm" aria-hidden="true">🛡</span></div>
+                            <p class="text-white/80 text-sm font-medium">Asuransi otomatis di setiap pengiriman</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-form-wrap">
+                    <div class="w-full max-w-sm">
+                        <div class="flex items-center gap-3 mb-8 lg:hidden">
+                            <div class="w-11 h-11 rounded-2xl gradient-primary flex items-center justify-center shrink-0">
+                                <span class="text-white text-lg" aria-hidden="true">📦</span>
+                            </div>
+                            <p class="font-extrabold text-gray-800 text-lg tracking-tight">Sukabumi Logistik</p>
+                        </div>
+
+                        <h2 class="text-2xl font-bold text-gray-800">Masuk ke akun kamu</h2>
+                        <p class="text-sm text-gray-500 mt-1.5">Kelola pengiriman paketmu lebih mudah.</p>
+
+                        <div class="space-y-4 mt-7">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Email atau No. HP</label>
+                                <input id="login-email" type="text" placeholder="nama@email.com" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Password</label>
+                                <div class="relative mt-1.5">
+                                    <input id="login-password" type="password" placeholder="Masukkan password" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 pr-12 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                                    <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" aria-label="Tampilkan password">👁</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="checkbox-custom">
+                                    <span class="text-sm font-semibold text-gray-600 pointer-events-none">Ingat saya</span>
+                                </label>
+                                <button onclick="goTo('forgot-password')" class="ripple-dark text-sm font-bold text-primary px-2 py-1 rounded-lg">Lupa password?</button>
+                            </div>
+                        </div>
+
+                        <button onclick="doLogin()" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-7">
+                            <span class="pointer-events-none">Masuk</span>
+                        </button>
+
+                        <p class="text-center text-sm text-gray-500 mt-6">
+                            Belum punya akun?
+                            <button onclick="goTo('register')" class="ripple-dark text-primary font-bold px-1.5 py-1 rounded-lg">Daftar sekarang</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: REGISTER -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-register" class="page">
+            <div class="auth-shell">
+                <div class="auth-brand gradient-primary relative overflow-hidden flex-col justify-between p-10 lg:p-14">
+                    <div class="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="absolute bottom-0 left-0 w-56 h-56 bg-secondary/10 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                                <span class="text-white text-xl" aria-hidden="true">📦</span>
+                            </div>
+                            <p class="text-white font-extrabold text-lg tracking-tight">Sukabumi Logistik</p>
+                        </div>
+                        <h1 class="text-white text-3xl lg:text-4xl font-bold mt-10 leading-tight">Gabung dan mulai kirim paketmu bersama kami</h1>
+                        <p class="text-white/60 text-base mt-4 max-w-sm">Pendaftaran gratis, tanpa biaya bulanan.</p>
+                    </div>
+                    <div class="relative z-10 space-y-4 mt-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><span class="text-white text-sm" aria-hidden="true">⚡</span></div>
+                            <p class="text-white/80 text-sm font-medium">Bandingkan harga kurir dalam hitungan detik</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><span class="text-white text-sm" aria-hidden="true">🎁</span></div>
+                            <p class="text-white/80 text-sm font-medium">Cashback di setiap transaksi pertama</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-form-wrap">
+                    <div class="w-full max-w-sm">
+                        <div class="flex items-center gap-3 mb-8 lg:hidden">
+                            <div class="w-11 h-11 rounded-2xl gradient-primary flex items-center justify-center shrink-0">
+                                <span class="text-white text-lg" aria-hidden="true">📦</span>
+                            </div>
+                            <p class="font-extrabold text-gray-800 text-lg tracking-tight">Sukabumi Logistik</p>
+                        </div>
+
+                        <h2 class="text-2xl font-bold text-gray-800">Buat akun baru</h2>
+                        <p class="text-sm text-gray-500 mt-1.5">Isi datamu untuk mulai mengirim paket.</p>
+
+                        <div class="space-y-4 mt-7">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Nama Lengkap</label>
+                                <input id="reg-nama" type="text" placeholder="Nama sesuai KTP" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Email</label>
+                                <input id="reg-email" type="email" placeholder="nama@email.com" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">No. HP</label>
+                                <input id="reg-hp" type="tel" placeholder="08xx-xxxx-xxxx" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Password</label>
+                                <div class="relative mt-1.5">
+                                    <input id="reg-password" type="password" placeholder="Minimal 8 karakter" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 pr-12 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                                    <button type="button" onclick="togglePasswordVisibility('reg-password', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" aria-label="Tampilkan password">👁</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Konfirmasi Password</label>
+                                <input id="reg-password-confirm" type="password" placeholder="Ulangi password" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                            <label class="flex items-start gap-2.5 cursor-pointer pt-1">
+                                <input type="checkbox" class="checkbox-custom mt-0.5">
+                                <span class="text-sm text-gray-500 pointer-events-none">Saya menyetujui Syarat & Ketentuan serta Kebijakan Privasi Sukabumi Logistik</span>
+                            </label>
+                        </div>
+
+                        <button onclick="doRegister()" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-7">
+                            <span class="pointer-events-none">Daftar</span>
+                        </button>
+
+                        <p class="text-center text-sm text-gray-500 mt-6">
+                            Sudah punya akun?
+                            <button onclick="goTo('login')" class="ripple-dark text-primary font-bold px-1.5 py-1 rounded-lg">Masuk</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: FORGOT PASSWORD — step 1: request magic link -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-forgot-password" class="page">
+            <div class="auth-shell">
+                <div class="auth-brand gradient-primary relative overflow-hidden flex-col justify-between p-10 lg:p-14">
+                    <div class="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="absolute bottom-0 left-0 w-56 h-56 bg-secondary/10 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                                <span class="text-white text-xl" aria-hidden="true">🔑</span>
+                            </div>
+                            <p class="text-white font-extrabold text-lg tracking-tight">Sukabumi Logistik</p>
+                        </div>
+                        <h1 class="text-white text-3xl lg:text-4xl font-bold mt-10 leading-tight">Masuk lebih aman tanpa mengetik password</h1>
+                        <p class="text-white/60 text-base mt-4 max-w-sm">Kami kirimkan link masuk langsung ke email kamu.</p>
+                    </div>
+                </div>
+
+                <div class="auth-form-wrap">
+                    <div class="w-full max-w-sm">
+                        <button onclick="goTo('login')" class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center relative shrink-0 mb-6 ripple-dark">
+                            <span class="text-gray-600 pointer-events-none" aria-hidden="true">←</span>
+                        </button>
+                        <h2 class="text-2xl font-bold text-gray-800">Lupa password?</h2>
+                        <p class="text-sm text-gray-500 mt-1.5">Masukkan email akun kamu, kami akan kirimkan link masuk (magic link) untuk mengatur ulang password.</p>
+
+                        <div class="mt-7">
+                            <label class="text-sm font-semibold text-gray-700">Email</label>
+                            <input id="fp-email" type="email" placeholder="nama@email.com" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                        </div>
+
+                        <button onclick="sendMagicLink()" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-7">
+                            <span class="pointer-events-none">Kirim Link Masuk</span>
+                        </button>
+
+                        <p class="text-center text-sm text-gray-500 mt-6">
+                            Ingat password kamu?
+                            <button onclick="goTo('login')" class="ripple-dark text-primary font-bold px-1.5 py-1 rounded-lg">Masuk</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: FORGOT PASSWORD — step 2: link sent confirmation -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-forgot-sent" class="page">
+            <div class="auth-shell">
+                <div class="auth-form-wrap lg:flex-1" style="flex: 1 1 100%;">
+                    <div class="w-full max-w-sm">
+                        <div class="w-16 h-16 rounded-3xl bg-primary-light flex items-center justify-center mx-auto">
+                            <span class="text-primary text-3xl" aria-hidden="true">📧</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 text-center mt-6">Cek email kamu</h2>
+                        <p class="text-sm text-gray-500 mt-2 text-center">
+                            Kami sudah mengirimkan link masuk ke <span class="font-bold text-gray-700" id="fp-sent-email">email kamu</span>. Klik link tersebut untuk melanjutkan mengatur ulang password.
+                        </p>
+
+                        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3.5 flex items-start gap-2 mt-6">
+                            <span class="text-blue-600 shrink-0" aria-hidden="true">ℹ</span>
+                            <p class="text-sm text-blue-800">Link berlaku selama 15 menit. Tidak menerima email? Cek folder spam, atau kirim ulang di bawah ini.</p>
+                        </div>
+
+                        <button onclick="alert('Email berhasil dikirim ulang.')" class="w-full bg-white border-2 border-gray-200 text-gray-700 font-bold text-base py-3.5 rounded-2xl ripple-dark flex items-center justify-center gap-2 mt-6">
+                            <span class="pointer-events-none">Kirim Ulang Email</span>
+                        </button>
+
+                        <div class="bg-secondary-light border border-secondary/20 rounded-2xl p-4 mt-4">
+                            <p class="text-sm font-bold text-secondary uppercase tracking-wide">Mode Demo</p>
+                            <p class="text-sm text-gray-600 mt-1">Karena ini prototipe, gunakan tombol di bawah untuk mensimulasikan link magic yang seharusnya kamu buka dari email.</p>
+                            <button onclick="goTo('reset-password')" class="w-full gradient-primary text-white font-bold text-base py-3.5 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-3">
+                                <span class="pointer-events-none">Buka Link Magic (Simulasi)</span>
+                            </button>
+                        </div>
+
+                        <p class="text-center text-sm text-gray-500 mt-6">
+                            <button onclick="goTo('login')" class="ripple-dark text-primary font-bold px-1.5 py-1 rounded-lg">Kembali ke Masuk</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: FORGOT PASSWORD — step 3: set new password (post magic-link) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-reset-password" class="page">
+            <div class="auth-shell">
+                <div class="auth-form-wrap" style="flex: 1 1 100%;">
+                    <div class="w-full max-w-sm">
+                        <div class="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center mx-auto">
+                            <span class="text-emerald-600 text-3xl" aria-hidden="true">🔓</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 text-center mt-6">Buat password baru</h2>
+                        <p class="text-sm text-gray-500 mt-2 text-center">Link magic kamu valid. Buat password baru untuk akun ini.</p>
+
+                        <div class="space-y-4 mt-7">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Password Baru</label>
+                                <div class="relative mt-1.5">
+                                    <input id="rp-password" type="password" placeholder="Minimal 8 karakter" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 pr-12 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                                    <button type="button" onclick="togglePasswordVisibility('rp-password', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" aria-label="Tampilkan password">👁</button>
+                                </div>
+                                <p class="text-sm text-gray-400 mt-1.5">Kombinasikan huruf dan angka agar lebih aman.</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Konfirmasi Password Baru</label>
+                                <input id="rp-password-confirm" type="password" placeholder="Ulangi password baru" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                        </div>
+
+                        <button onclick="doResetPassword()" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-7">
+                            <span class="pointer-events-none">Simpan Password Baru</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: FORGOT PASSWORD — step 4: success -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-reset-success" class="page">
+            <div class="auth-shell">
+                <div class="auth-form-wrap" style="flex: 1 1 100%;">
+                    <div class="w-full max-w-sm text-center">
+                        <div class="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center mx-auto">
+                            <span class="text-emerald-600 text-3xl" aria-hidden="true">✅</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mt-6">Password berhasil diubah</h2>
+                        <p class="text-sm text-gray-500 mt-2">Kamu bisa masuk sekarang menggunakan password barumu.</p>
+
+                        <button onclick="goTo('login')" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2 mt-7">
+                            <span class="pointer-events-none">Masuk Sekarang</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: HOME -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-home" class="page pb-28">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-6 pt-14 pb-10 rounded-b-[2rem] relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                <div class="absolute bottom-0 left-0 w-48 h-48 bg-secondary/10 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+                <div class="header-inner relative z-10">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <p class="text-white/70 text-sm font-medium">Selamat Pagi,</p>
+                            <h1 class="text-white text-2xl font-bold mt-0.5">Fulan 👋</h1>
+                        </div>
+                        <button class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center relative shrink-0">
+                            <span class="absolute inset-0 rounded-2xl ripple"></span>
+                            <span class="text-white text-lg relative z-10 pointer-events-none" aria-hidden="true">🔔</span>
+                            <span class="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 rounded-full text-sm text-white flex items-center justify-center font-bold border-2 border-[#002144] z-20 pointer-events-none">3</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="page-content px-5 -mt-4 relative z-20">
+                <div class="bg-white rounded-2xl card-shadow p-1 flex items-center">
+                    <div class="w-11 h-11 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+                        <span class="text-primary text-base" aria-hidden="true">🔍</span>
+                    </div>
+                    <input type="text" placeholder="Lacak pengiriman, cari rute..." class="flex-1 bg-transparent px-3 py-3 text-base text-gray-700 placeholder-gray-400 focus:outline-hidden">
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="page-content px-5 mt-6">
+                <div class="qa-panel bg-white rounded-3xl card-shadow p-5">
+                    <div class="qa-grid flex justify-around items-center">
+                        <button onclick="goTo('send')" class="qa-btn flex flex-col items-center gap-2.5 w-20">
+                            <div class="qa-icon w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center relative ripple-dark">
+                                <span class="text-primary text-2xl pointer-events-none" aria-hidden="true">📦</span>
+                            </div>
+                            <span class="qa-label text-sm font-semibold text-gray-700 text-center">Kirim Paket</span>
+                        </button>
+                        <button onclick="goTo('lacak')" class="qa-btn flex flex-col items-center gap-2.5 w-20">
+                            <div class="qa-icon w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center relative ripple-dark">
+                                <span class="text-orange-500 text-2xl pointer-events-none" aria-hidden="true">📍</span>
+                            </div>
+                            <span class="qa-label text-sm font-semibold text-gray-700 text-center">Lacak Pengiriman</span>
+                        </button>
+                        <button onclick="goTo('alamat')" class="qa-btn flex flex-col items-center gap-2.5 w-20">
+                            <div class="qa-icon w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center relative ripple-dark">
+                                <span class="text-purple-500 text-2xl pointer-events-none" aria-hidden="true">🏠</span>
+                            </div>
+                            <span class="qa-label text-sm font-semibold text-gray-700 text-center">Alamat Tersimpan</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partner Carriers -->
+            <div class="page-content px-5 mt-6">
+                <h2 class="text-base font-bold text-gray-800 mb-3">Mitra Pengiriman</h2>
+                <div class="bg-white rounded-3xl card-shadow p-5">
+                    <div class="grid grid-cols-5 lg:grid-cols-10 gap-y-5 gap-x-2">
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra()">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#D40511] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-sm pointer-events-none">DHL</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">DHL</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('JNE Reguler')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#D40511] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-sm pointer-events-none">JNE</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">JNE</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra()">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#0066CC] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-sm pointer-events-none">TIKI</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Tiki</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('J&T Express')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#E31E24] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-sm pointer-events-none">J&T</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">J&T</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra()">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#FDB913] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-primary font-bold text-sm pointer-events-none">POS</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Pos</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('SiCepat Express')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#4B0082] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-[10px] pointer-events-none">SICE</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">SiCepat</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('Lion Parcel')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#00A651] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white text-sm pointer-events-none" aria-hidden="true">✈</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Lion</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('GrabExpress')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#00B14F] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-[10px] pointer-events-none">GRAB</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Grab</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra()">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#00AA13] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white text-sm pointer-events-none" aria-hidden="true">🏍</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Gojek</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1.5 cursor-pointer" onclick="openKirimWithMitra('AnterAja')">
+                            <div class="partner-badge relative w-12 h-12 rounded-full bg-[#00A8E8] flex items-center justify-center shadow-xs ripple">
+                                <span class="text-white font-bold text-[10px] pointer-events-none">ANT</span>
+                            </div>
+                            <span class="text-sm text-gray-500 font-semibold">Anteraja</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Shipments -->
+            <div class="page-content px-5 mt-6 mb-24">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-base font-bold text-gray-800">Pengiriman Aktif</h2>
+                    <button onclick="goTo('lacak')" class="ripple-dark text-sm font-semibold text-primary px-2 py-1 rounded-lg">Lihat Semua</button>
+                </div>
+                <div class="grid-active-shipments">
+                    <div class="bg-white rounded-3xl p-4 card-shadow flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center shrink-0">
+                            <span class="text-primary text-2xl" aria-hidden="true">📦</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-gray-800 text-base truncate">Jakarta → Surabaya</h4>
+                                <span class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">Tepat Waktu</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">#SL-8842 • DHL Express</p>
+                            <div class="flex items-center gap-3 mt-2.5">
+                                <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div class="h-full bg-linear-to-r from-primary to-blue-500 rounded-full" style="width: 75%"></div>
+                                </div>
+                                <span class="text-sm text-gray-400 font-semibold">Dalam Perjalanan</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 card-shadow flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+                            <span class="text-orange-500 text-2xl" aria-hidden="true">✈</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-gray-800 text-base truncate">Bali → Singapura</h4>
+                                <span class="text-sm font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">Diambil</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">#SL-9911 • Lion Parcel</p>
+                            <div class="flex items-center gap-3 mt-2.5">
+                                <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div class="h-full bg-linear-to-r from-orange-400 to-amber-400 rounded-full" style="width: 30%"></div>
+                                </div>
+                                <span class="text-sm text-gray-400 font-semibold">Diproses</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Nav -->
+            <div class="lg:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full mobile-shell-width bg-white/90 backdrop-blur-xl border-t border-gray-100 px-4 py-3 pb-6 z-50">
+                <div class="flex justify-between items-center">
+                    <button onclick="goTo('home')" class="nav-item active flex flex-col items-center gap-1 w-16">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🏠</span>
+                        </div>
+                        <span class="text-xs font-semibold">Beranda</span>
+                    </button>
+                    <button onclick="goTo('riwayat')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🕑</span>
+                        </div>
+                        <span class="text-xs font-semibold">Riwayat</span>
+                    </button>
+                    <button onclick="goTo('profil')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">👤</span>
+                        </div>
+                        <span class="text-xs font-semibold">Profil</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: PROFIL -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-profil" class="page pb-28">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-6 pt-14 pb-10 rounded-b-[2rem] relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                <div class="absolute bottom-0 left-0 w-48 h-48 bg-secondary/10 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+                <div class="header-inner relative z-10 flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                        <span class="text-white text-2xl" aria-hidden="true">👤</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-white text-2xl font-bold truncate">Fulan</h1>
+                        <p class="text-white/60 text-sm truncate">fulan@email.com</p>
+                    </div>
+                    <button class="ml-auto w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white text-base pointer-events-none" aria-hidden="true">✎</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ringkasan (moved from Beranda) -->
+            <div class="page-content px-5 -mt-5 relative z-20">
+                <div class="bg-white rounded-3xl card-shadow p-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-bold text-gray-800">Ringkasan</h2>
+                        <button class="ripple-dark text-base font-semibold text-primary px-2 py-1 rounded-lg">Minggu Ini ▾</button>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="bg-gray-50 rounded-2xl p-4">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+                                <span class="text-blue-600 text-base" aria-hidden="true">📦</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">24</p>
+                            <p class="text-sm text-gray-500 mt-0.5">Total Pengiriman</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-4">
+                            <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center mb-2">
+                                <span class="text-amber-600 text-base" aria-hidden="true">🕐</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">8</p>
+                            <p class="text-sm text-gray-500 mt-0.5">Dalam Proses</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-4">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
+                                <span class="text-emerald-600 text-base" aria-hidden="true">✅</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">16</p>
+                            <p class="text-sm text-gray-500 mt-0.5">Terkirim</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-4">
+                            <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center mb-2">
+                                <span class="text-red-500 text-base" aria-hidden="true">⚠</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-800">3</p>
+                            <p class="text-sm text-gray-500 mt-0.5">Tertunda</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account menu -->
+            <div class="page-content px-5 mt-6 mb-24 space-y-3">
+                <h2 class="text-base font-bold text-gray-800 mb-1">Akun</h2>
+                <button onclick="goTo('alamat')" class="ripple-dark w-full flex items-center justify-between bg-white rounded-2xl card-shadow px-4 py-4">
+                    <span class="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                        <span class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0"><span class="text-primary text-base" aria-hidden="true">📍</span></span>
+                        Alamat Tersimpan
+                    </span>
+                    <span class="text-gray-300 text-sm" aria-hidden="true">›</span>
+                </button>
+                <button class="ripple-dark w-full flex items-center justify-between bg-white rounded-2xl card-shadow px-4 py-4">
+                    <span class="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                        <span class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0"><span class="text-primary text-base" aria-hidden="true">⚙</span></span>
+                        Pengaturan Akun
+                    </span>
+                    <span class="text-gray-300 text-sm" aria-hidden="true">›</span>
+                </button>
+                <button class="ripple-dark w-full flex items-center justify-between bg-white rounded-2xl card-shadow px-4 py-4">
+                    <span class="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                        <span class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0"><span class="text-primary text-base" aria-hidden="true">❓</span></span>
+                        Pusat Bantuan
+                    </span>
+                    <span class="text-gray-300 text-sm" aria-hidden="true">›</span>
+                </button>
+                <button onclick="goTo('login')" class="ripple-dark w-full flex items-center justify-between bg-white rounded-2xl card-shadow px-4 py-4">
+                    <span class="flex items-center gap-3 text-base font-semibold text-red-500">
+                        <span class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0"><span class="text-red-500 text-base" aria-hidden="true">🚪</span></span>
+                        Keluar
+                    </span>
+                </button>
+            </div>
+
+            <!-- Bottom Nav -->
+            <div class="lg:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full mobile-shell-width bg-white/90 backdrop-blur-xl border-t border-gray-100 px-4 py-3 pb-6 z-50">
+                <div class="flex justify-between items-center">
+                    <button onclick="goTo('home')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🏠</span>
+                        </div>
+                        <span class="text-xs font-semibold">Beranda</span>
+                    </button>
+                    <button onclick="goTo('riwayat')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🕑</span>
+                        </div>
+                        <span class="text-xs font-semibold">Riwayat</span>
+                    </button>
+                    <button onclick="goTo('profil')" class="nav-item active flex flex-col items-center gap-1 w-16">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple">
+                            <span class="text-base pointer-events-none" aria-hidden="true">👤</span>
+                        </div>
+                        <span class="text-xs font-semibold">Profil</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: SEND -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-send" class="page pb-32">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6 sticky top-0 z-30">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goTo('home')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div>
+                        <h1 class="text-white text-xl font-bold">Kirim Paket</h1>
+                        <p class="text-white/60 text-sm">Sukabumi Logistik</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-5 max-w-full">
+
+                <!-- Route -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <div class="grid grid-cols-[28px_1fr] gap-x-3">
+                        <!-- Marker spine: spans both rows so the dashed line always
+                             stretches exactly from the pickup dot to the delivery
+                             pin (never overflowing past it), regardless of how
+                             tall either address block gets. -->
+                        <div class="row-span-2 flex flex-col items-center">
+                            <div class="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                            </div>
+                            <div class="route-line-fill flex-1 w-0.5 my-1.5"></div>
+                            <div class="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+                                <span class="text-primary text-sm" aria-hidden="true">📍</span>
+                            </div>
+                        </div>
+
+                        <!-- Pickup content -->
+                        <div class="min-w-0 pb-4">
+                            <label class="text-sm font-bold text-gray-400 uppercase tracking-wider">Lokasi Penjemputan</label>
+                            <div class="relative mt-1.5">
+                                <input type="text" placeholder="Cari kecamatan..." class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden pr-10" oninput="showAddressPreview(this, 'pickup-preview')">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" aria-hidden="true">🔍</span>
+                            </div>
+                            <div id="pickup-preview" class="hidden mt-2 p-3 bg-primary-light rounded-xl flex items-start gap-2">
+                                <span class="text-primary text-base mt-0.5" aria-hidden="true">📍</span>
+                                <div class="min-w-0">
+                                    <p class="text-base font-semibold text-primary">Jakarta Selatan, Tebet</p>
+                                    <p class="text-sm text-gray-500 mt-0.5">Kel. Tebet Barat, Indonesia</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery content -->
+                        <div class="min-w-0">
+                            <label class="text-sm font-bold text-gray-400 uppercase tracking-wider">Lokasi Tujuan</label>
+                            <div class="relative mt-1.5">
+                                <input type="text" placeholder="Cari kecamatan..." class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden pr-10" oninput="showAddressPreview(this, 'delivery-preview')">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" aria-hidden="true">🔍</span>
+                            </div>
+                            <div id="delivery-preview" class="hidden mt-2 p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-2">
+                                <span class="text-amber-600 text-base mt-0.5" aria-hidden="true">📍</span>
+                                <div class="min-w-0">
+                                    <p class="text-base font-semibold text-amber-700">Surabaya, Wonokromo</p>
+                                    <p class="text-sm text-gray-500 mt-0.5">Kel. Wonokromo, Indonesia</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Package Details + Pickup Schedule sit side by side on
+                     wider screens since they're two independent, equally
+                     short forms. -->
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <!-- Package Details (weight/dimension only - the rest moves to
+                         the Detail Pesanan page once a courier has been chosen) -->
+                    <div class="bg-white rounded-3xl p-5 card-shadow">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-xl bg-primary-light flex items-center justify-center">
+                                <span class="text-primary text-base" aria-hidden="true">📦</span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">Detail Paket</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Berat <span class="text-red-500">*</span></label>
+                                <div class="relative mt-1.5">
+                                    <input type="number" placeholder="0.0" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden pr-12">
+                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">kg</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Dimensi <span class="text-gray-400 font-normal">(opsional)</span></label>
+                                <div class="flex gap-2 mt-1.5">
+                                    <div class="relative flex-1">
+                                        <input type="number" placeholder="P" class="input-field w-full bg-gray-50 rounded-2xl px-3 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden text-center pr-8">
+                                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">cm</span>
+                                    </div>
+                                    <div class="relative flex-1">
+                                        <input type="number" placeholder="L" class="input-field w-full bg-gray-50 rounded-2xl px-3 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden text-center pr-8">
+                                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">cm</span>
+                                    </div>
+                                    <div class="relative flex-1">
+                                        <input type="number" placeholder="T" class="input-field w-full bg-gray-50 rounded-2xl px-3 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden text-center pr-8">
+                                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">cm</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pickup Schedule -->
+                    <div class="bg-white rounded-3xl p-5 card-shadow">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                <span class="text-emerald-600 text-base" aria-hidden="true">🕐</span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">Jadwal Penjemputan</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Tanggal</label>
+                                <input type="date" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 focus:outline-hidden">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Waktu</label>
+                                <select class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 focus:outline-hidden appearance-none">
+                                    <option>09:00 - 12:00</option>
+                                    <option>12:00 - 15:00</option>
+                                    <option>15:00 - 18:00</option>
+                                    <option>18:00 - 21:00</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferred Mitra (moved to the end) -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-8 h-8 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+                            <span class="text-primary text-base" aria-hidden="true">❤</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-base">Pilih mitra yang ingin ditampilkan</h3>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-3 ml-10">Bisa pilih lebih dari satu mitra favorit</p>
+                    <div class="flex flex-wrap gap-2" id="preferred-mitra-send">
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom" checked>
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">J&T Express</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">SiCepat</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">JNE</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">GrabExpress</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">AnterAja</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">Ninja Xpress</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">Lion Parcel</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">LalaMove</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Instant Courier (moved to the end) -->
+                <div class="bg-white rounded-3xl p-4 card-shadow flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                            <span class="text-orange-500" aria-hidden="true">⚡</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-800">Kurir Instan</p>
+                            <p class="text-sm text-gray-500">GrabExpress / LalaMove</p>
+                        </div>
+                    </div>
+                    <input type="checkbox" class="switch-toggle shrink-0" id="instant-toggle" onchange="toggleInstant()">
+                </div>
+
+                <div id="instant-details" class="hidden bg-orange-50 rounded-3xl p-4 border border-orange-100 space-y-3 card-shadow">
+                    <p class="text-sm font-bold text-orange-700 uppercase tracking-wider">Detail Kurir Instan</p>
+                    <input type="text" placeholder="Alamat jemput detail (warna pagar, lantai...)" class="input-field w-full bg-white rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                    <input type="text" placeholder="Alamat tujuan detail (warna pagar, lantai...)" class="input-field w-full bg-white rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                    <input type="text" placeholder="Info lokasi (contoh: gerbang biru, lantai 2)" class="input-field w-full bg-white rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                </div>
+
+                <div class="h-4"></div>
+            </div>
+
+            <!-- Sticky Bottom -->
+            <div class="sticky-bar bg-white/95 backdrop-blur-xl border-t border-gray-100 py-4">
+                <div class="page-content px-5">
+                    <button onclick="goTo('mitra')" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2">
+                        <span class="pointer-events-none">Pilih Kurir</span>
+                        <span class="text-base pointer-events-none" aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: MITRA -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-mitra" class="page pb-60">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6 sticky top-0 z-30">
+                <div class="header-inner space-y-3">
+                    <div class="flex items-center gap-4 mb-1">
+                        <button onclick="goTo('send')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                            <span class="absolute inset-0 rounded-xl ripple"></span>
+                            <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                        </button>
+                        <div>
+                            <h1 class="text-white text-xl font-bold">Pilih Kurir</h1>
+                            <p class="text-white/60 text-sm">Sukabumi Logistik — 9 mitra tersedia</p>
+                        </div>
+                    </div>
+
+                    <!-- Route Summary Card (vertical, matching the Kirim Paket style) -->
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <div class="grid grid-cols-[24px_1fr_44px] gap-x-2">
+                            <!-- Marker spine -->
+                            <div class="row-span-2 flex flex-col items-center">
+                                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                                    <span class="text-emerald-400 text-xs" aria-hidden="true">●</span>
+                                </div>
+                                <div class="route-line-fill-dark flex-1 w-0.5 my-1"></div>
+                                <div class="w-6 h-6 rounded-lg bg-secondary/20 flex items-center justify-center shrink-0 border border-secondary/30">
+                                    <span class="text-secondary text-xs" aria-hidden="true">📍</span>
+                                </div>
+                            </div>
+                            <!-- Pickup -->
+                            <div class="min-w-0 pb-2.5">
+                                <p class="text-white text-base font-bold truncate" id="mitra-route-pickup-city">Jakarta Selatan</p>
+                                <p class="text-white/50 text-sm truncate" id="mitra-route-pickup-area">Tebet</p>
+                            </div>
+                            <!-- Swap (spans both rows, centered) -->
+                            <button onclick="swapRoute()" class="ripple row-span-2 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center self-center shrink-0 hover:bg-white/20 transition-colors">
+                                <span class="text-white/70 text-lg pointer-events-none" aria-hidden="true">⇄</span>
+                            </button>
+                            <!-- Delivery -->
+                            <div class="min-w-0">
+                                <p class="text-white text-base font-bold truncate" id="mitra-route-delivery-city">Surabaya</p>
+                                <p class="text-white/50 text-sm truncate" id="mitra-route-delivery-area">Wonokromo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weight & Dimension (moved into the hero) -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 flex items-center gap-2.5 border border-white/10">
+                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                                <span class="text-white text-base" aria-hidden="true">⚖</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-white/50 font-semibold uppercase tracking-wide">Berat</p>
+                                <p class="text-base font-bold text-white truncate">2.5 kg</p>
+                            </div>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 flex items-center gap-2.5 border border-white/10">
+                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                                <span class="text-white text-base" aria-hidden="true">📏</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-white/50 font-semibold uppercase tracking-wide">Dimensi</p>
+                                <p class="text-base font-bold text-white truncate">30×20×15 cm</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="mitra-filter-sticky page-content px-5 pt-4 pb-2 sticky top-[236px] bg-[#f8f9fb] z-20">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+                    <button onclick="filterMitra('all')" class="tab-btn ripple active shrink-0 px-5 py-2.5 rounded-full text-base font-bold bg-white text-gray-600 border border-gray-200 transition-all">Semua</button>
+                    <button onclick="filterMitra('instant')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-base font-bold bg-white text-gray-600 border border-gray-200 transition-all">
+                        <span class="mr-1 text-orange-500 pointer-events-none" aria-hidden="true">⚡</span><span class="pointer-events-none">Instan</span>
+                    </button>
+                    <button onclick="filterMitra('sameday')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-base font-bold bg-white text-gray-600 border border-gray-200 transition-all">
+                        <span class="mr-1 text-blue-500 pointer-events-none" aria-hidden="true">🕐</span><span class="pointer-events-none">Same Day</span>
+                    </button>
+                    <button onclick="filterMitra('regular')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-base font-bold bg-white text-gray-600 border border-gray-200 transition-all">
+                        <span class="mr-1 text-primary pointer-events-none" aria-hidden="true">🚚</span><span class="pointer-events-none">Reguler</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sort & Filter Bar -->
+            <div class="page-content px-5 pb-3 flex items-center justify-between gap-2 flex-wrap">
+                <p class="text-sm text-gray-500"><span class="font-bold text-gray-700">9</span> kurir ditemukan</p>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleFavoritFilter()" id="favorit-filter-btn" class="ripple-dark flex items-center gap-1 text-sm font-bold text-primary bg-white px-2.5 py-2 rounded-xl border border-gray-200 card-shadow transition-colors whitespace-nowrap">
+                        <span class="filter-btn-icon pointer-events-none" aria-hidden="true">☑</span>
+                        <span class="pointer-events-none">Pilih Mitra</span>
+                    </button>
+                    <button class="ripple-dark flex items-center gap-1 text-sm font-bold text-primary bg-white px-2.5 py-2 rounded-xl border border-gray-200 card-shadow whitespace-nowrap">
+                        <span class="pointer-events-none" aria-hidden="true">⇅</span>
+                        <span class="pointer-events-none">Harga Terbaik</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Panel (collapsible, opened by the "Pilih Mitra" button) -->
+            <div id="favorit-filter-panel" class="hidden page-content px-5 pb-4">
+                <div class="bg-white rounded-3xl p-4 card-shadow">
+                    <p class="text-sm font-bold text-gray-700">Pilih Mitra</p>
+                    <p class="text-sm text-gray-500 mb-3">Pilih mitra yang ingin ditampilkan</p>
+                    <div class="flex flex-wrap gap-2" id="preferred-mitra-filter">
+                        <label class="ripple-dark flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-white cursor-pointer">
+                            <input type="checkbox" class="checkbox-custom" checked style="border-color: white;">
+                            <span class="text-sm font-semibold pointer-events-none">J&T</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">SiCepat</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">JNE</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">Grab</span>
+                        </label>
+                        <label class="ripple-dark flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:border-primary/30 transition-colors">
+                            <input type="checkbox" class="checkbox-custom">
+                            <span class="text-sm font-semibold text-gray-700 pointer-events-none">AnterAja</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mitra List -->
+            <div class="page-content grid-mitra-list px-5" id="mitra-list">
+
+                <!-- J&T Express -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="J&T Express" data-price="Rp 28.000" data-eta="2-3 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#E31E24] to-[#b91c1c] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-base tracking-tight">J&T</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">J&T Express</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 2-3 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+                                    <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🛡</span> Asuransi</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚚</span> Truk</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 28.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- SiCepat Express -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="SiCepat Express" data-price="Rp 26.500" data-eta="2-3 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#4B0082] to-[#36005c] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-sm">SICE</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">SiCepat Express</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 2-3 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚚</span> Truk</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 26.500</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- GrabExpress -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="instant" data-name="GrabExpress" data-price="Rp 45.000" data-eta="< 2 jam" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#00B14F] to-[#008f3f] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white text-2xl" aria-hidden="true">🏍</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">GrabExpress</h4>
+                                    <span class="status-badge bg-orange-50 text-orange-700 shrink-0"><span class="text-[10px]" aria-hidden="true">⚡</span> Instan</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-orange-600 text-sm font-bold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> < 2 jam</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput hari ini</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🏍</span> Motor</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 45.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- JNE Reguler -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="JNE Reguler" data-price="Rp 30.000" data-eta="3-4 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#D40511] to-[#a5040d] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-base">JNE</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">JNE Reguler</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 3-4 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚚</span> Truk</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 30.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- AnterAja -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="sameday" data-name="AnterAja" data-price="Rp 38.000" data-eta="1 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#00A8E8] to-[#0086ba] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-sm">ANT</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">AnterAja</h4>
+                                    <span class="status-badge bg-sky-50 text-sky-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🕐</span> Same Day</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-orange-600 text-sm font-bold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 1 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput hari ini</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🏍</span> Motor</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 38.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Ninja Xpress -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="Ninja Xpress" data-price="Rp 27.000" data-eta="2-3 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#6B21A8] to-[#4c1579] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-sm">NIN</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">Ninja Xpress</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 2-3 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚚</span> Truk</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 27.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Lion Parcel -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="Lion Parcel" data-price="Rp 29.000" data-eta="2-4 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#00A651] to-[#008542] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white text-xl" aria-hidden="true">✈</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">Lion Parcel</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 2-4 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">✈</span> Pesawat</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 29.000</p>
+                                <p class="text-sm text-gray-400">1.5kg = 1kg</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- LalaMove -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="instant" data-name="LalaMove" data-price="Rp 52.000" data-eta="< 3 jam" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#FF6B00] to-[#cc5500] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white text-xl" aria-hidden="true">🚚</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">LalaMove</h4>
+                                    <span class="status-badge bg-orange-50 text-orange-700 shrink-0"><span class="text-[10px]" aria-hidden="true">⚡</span> Instan</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-orange-600 text-sm font-bold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> < 3 jam</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput hari ini</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚗</span> Mobil & Motor</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 52.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- RPX Logistics -->
+                <div class="mitra-card bg-white rounded-3xl card-shadow overflow-hidden cursor-pointer" data-type="regular" data-name="RPX Logistics" data-price="Rp 31.000" data-eta="2-3 hari" onclick="selectMitra(this)">
+                    <div class="p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-[#002144] to-[#001a35] flex items-center justify-center shrink-0 shadow-md">
+                                <span class="text-white font-extrabold text-sm">RPX</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base leading-tight">RPX Logistics</h4>
+                                    <span class="status-badge bg-blue-50 text-blue-700 shrink-0"><span class="text-[10px]" aria-hidden="true">🚚</span> Reguler</span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">🕐</span> 2-3 hari</span>
+                                    <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-600 text-sm font-semibold px-2 py-1 rounded-lg"><span class="text-sm" aria-hidden="true">📅</span> Jemput besok</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span class="feature-chip bg-primary-light text-primary"><span class="text-[10px]" aria-hidden="true">🚚</span> Truk</span>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <p class="text-xl font-extrabold text-primary leading-none">Rp 31.000</p>
+                            </div>
+                            <button class="select-btn ripple px-4 py-2.5 rounded-xl bg-primary text-white text-base font-bold shadow-md shadow-primary/20 shrink-0">Pilih</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="h-10"></div>
+
+            <!-- Sticky Bottom Summary -->
+            <div class="sticky-bar bg-white/95 backdrop-blur-xl border-t border-gray-100 py-4">
+                <div class="page-content px-5">
+                    <div id="mitra-summary" class="hidden mb-3 p-3 bg-primary-light rounded-2xl border border-primary/10">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
+                                    <span class="text-white text-base" aria-hidden="true">✓</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-base font-bold text-primary truncate" id="selected-mitra-name">J&T Express</p>
+                                    <p class="text-sm text-primary/70" id="selected-mitra-meta">Reguler • 2-3 hari</p>
+                                </div>
+                            </div>
+                            <p class="text-2xl font-extrabold text-primary shrink-0 ml-2" id="selected-mitra-price">Rp 28.000</p>
+                        </div>
+                    </div>
+                    <button onclick="goToDetailOrder()" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2">
+                        <span class="pointer-events-none">Lanjutkan</span>
+                        <span class="text-base pointer-events-none" aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: DETAIL PESANAN (reached after choosing a courier) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-detail" class="page pb-32">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6 sticky top-0 z-30">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goTo('mitra')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div>
+                        <h1 class="text-white text-xl font-bold">Detail Pesanan</h1>
+                        <p class="text-white/60 text-sm">Lengkapi data sebelum bayar</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-5 max-w-full">
+
+                <!-- Kurir Pilihan Kamu (recap) -->
+                <div class="bg-white rounded-3xl p-4 card-shadow">
+                    <p class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Kurir Pilihan Kamu</p>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-bold text-gray-800 text-base truncate" id="detail-courier-name">J&T Express</p>
+                            <p class="text-sm text-gray-500" id="detail-courier-eta">Reguler • 2-3 hari</p>
+                        </div>
+                        <p class="text-xl font-extrabold text-primary shrink-0" id="detail-courier-price">Rp 28.000</p>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                        <span class="text-gray-500">Jakarta Selatan → Surabaya</span>
+                        <span class="text-gray-500">2.5 kg</span>
+                    </div>
+                </div>
+
+                <!-- Rincian Paket -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-xl bg-primary-light flex items-center justify-center">
+                            <span class="text-primary text-base" aria-hidden="true">📦</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-base">Rincian Paket</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm font-semibold text-gray-700">Isi Paket</label>
+                            <input type="text" placeholder="Apa isi paketnya?" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Kategori</label>
+                                <select class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 focus:outline-hidden appearance-none">
+                                    <option>Barang Umum</option>
+                                    <option>Elektronik</option>
+                                    <option>Fashion</option>
+                                    <option>Makanan & Minuman</option>
+                                    <option>Dokumen</option>
+                                    <option>Mudah Pecah</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Harga Barang (Rp)</label>
+                                <input type="number" placeholder="0" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-700">Jumlah Barang</label>
+                            <input type="number" placeholder="1" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Pengirim + Data Penerima sit side by side on wider
+                     screens since they're the same short form, twice. -->
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <div class="bg-white rounded-3xl p-5 card-shadow">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                <span class="text-emerald-600 text-base" aria-hidden="true">👤</span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">Data Pengirim</h3>
+                        </div>
+                        <div class="space-y-3">
+                            <input type="text" placeholder="Nama Lengkap Pengirim" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="tel" placeholder="Nomor Telepon" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="email" placeholder="Email" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="text" placeholder="Alamat Detail (nomor rumah, patokan)" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-5 card-shadow">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center">
+                                <span class="text-amber-600 text-base" aria-hidden="true">👤</span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">Data Penerima</h3>
+                        </div>
+                        <div class="space-y-3">
+                            <input type="text" placeholder="Nama Lengkap Penerima" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="tel" placeholder="Nomor Telepon" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="email" placeholder="Email" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                            <input type="text" placeholder="Alamat Detail (nomor rumah, patokan)" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asuransi Pengiriman -->
+                <div class="bg-white rounded-3xl p-4 card-shadow flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                            <span class="text-emerald-600" aria-hidden="true">🛡</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-800">Asuransi Pengiriman</p>
+                            <p class="text-sm text-gray-500">+ Rp 2.000</p>
+                        </div>
+                    </div>
+                    <input type="checkbox" class="switch-toggle shrink-0" id="insurance-toggle" checked onchange="updateTotal()">
+                </div>
+
+                <div class="bg-amber-50 border border-amber-100 rounded-2xl p-3 flex items-start gap-2">
+                    <span class="text-amber-600 shrink-0" aria-hidden="true">⚠</span>
+                    <p class="text-sm text-amber-800">Untuk barang yang harganya lebih dari 10 kali ongkos kirim, disarankan untuk diasuransikan.</p>
+                </div>
+
+                <!-- Total Pembayaran - deliberately styled unlike the input
+                     cards above (dark, on the primary brand color) so it
+                     reads as the final summary, not another form field. -->
+                <div class="gradient-primary rounded-3xl p-5 shadow-lg shadow-primary/20 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-white text-base">Total Pembayaran</h3>
+                            <p class="text-xl font-extrabold text-white" id="total-pembayaran">Rp 30.000</p>
+                        </div>
+                        <div class="space-y-2 mt-3 pt-3 border-t border-white/15">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-white/60">Biaya Ongkos Kirim</span>
+                                <span class="font-semibold text-white/90" id="biaya-ongkir">Rp 28.000</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-white/60">Biaya Asuransi Pengiriman</span>
+                                <span class="font-semibold text-white/90" id="biaya-asuransi">Rp 2.000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3 flex items-start gap-2">
+                    <span class="text-blue-600 shrink-0" aria-hidden="true">ℹ</span>
+                    <p class="text-sm text-blue-800">Cashback yang akan kamu dapat sebesar <span class="font-bold">Rp 1.745</span> setelah kamu selesai melakukan transaksi ini.</p>
+                </div>
+
+                <div class="bg-red-50 border border-red-100 rounded-2xl p-3 flex items-start gap-2">
+                    <span class="text-red-500 shrink-0" aria-hidden="true">⚠</span>
+                    <p class="text-sm text-red-700">Bila member terbukti secara sengaja <span class="font-bold">memanipulasi berat</span>, akun kamu akan dinonaktifkan secara permanen.</p>
+                </div>
+
+                <div class="h-4"></div>
+            </div>
+
+            <!-- Sticky Bottom -->
+            <div class="sticky-bar bg-white/95 backdrop-blur-xl border-t border-gray-100 py-4">
+                <div class="page-content px-5">
+                    <button onclick="alert('Pesanan berhasil dibuat! No. Resi: SL-2026-8843')" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2">
+                        <span class="pointer-events-none">Lanjutkan Bayar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: RIWAYAT -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-riwayat" class="page pb-28">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6">
+                <div class="header-inner">
+                    <h1 class="text-white text-xl font-bold">Riwayat</h1>
+                    <p class="text-white/60 text-sm">Sukabumi Logistik</p>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="page-content px-5 pt-4 pb-2">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+                    <button onclick="filterRiwayat('all')" class="tab-btn ripple active shrink-0 px-5 py-2.5 rounded-full text-sm font-bold bg-white text-gray-600 border border-gray-200 transition-all">Semua</button>
+                    <button onclick="filterRiwayat('selesai')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-sm font-bold bg-white text-gray-600 border border-gray-200 transition-all">Selesai</button>
+                    <button onclick="filterRiwayat('proses')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-sm font-bold bg-white text-gray-600 border border-gray-200 transition-all">Diproses</button>
+                    <button onclick="filterRiwayat('batal')" class="tab-btn ripple shrink-0 px-5 py-2.5 rounded-full text-sm font-bold bg-white text-gray-600 border border-gray-200 transition-all">Dibatalkan</button>
+                </div>
+            </div>
+
+            <!-- Order List -->
+            <div class="page-content grid-riwayat-list px-5 mt-2 mb-24" id="riwayat-list">
+                <button onclick="showRiwayatDetail(1)" data-status="selesai" class="ripple-dark w-full text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                        <span class="text-emerald-600 text-xl pointer-events-none" aria-hidden="true">✅</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-gray-800 text-base truncate">Jakarta Selatan → Surabaya</h4>
+                            <span class="status-badge bg-emerald-50 text-emerald-700 shrink-0">Selesai</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">#SL-2026-8843 • 5 Sep 2026</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-sm text-gray-500">J&T Express</span>
+                            <span class="text-base font-extrabold text-primary">Rp 28.000</span>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="showRiwayatDetail(2)" data-status="proses" class="ripple-dark w-full text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
+                        <span class="text-blue-600 text-xl pointer-events-none" aria-hidden="true">🚚</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-gray-800 text-base truncate">Jakarta Selatan → Bandung</h4>
+                            <span class="status-badge bg-blue-50 text-blue-700 shrink-0">Diproses</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">#SL-2026-8801 • 3 Sep 2026</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-sm text-gray-500">SiCepat Express</span>
+                            <span class="text-base font-extrabold text-primary">Rp 26.500</span>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="showRiwayatDetail(3)" data-status="selesai" class="ripple-dark w-full text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                        <span class="text-emerald-600 text-xl pointer-events-none" aria-hidden="true">✅</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-gray-800 text-base truncate">Jakarta Selatan → Semarang</h4>
+                            <span class="status-badge bg-emerald-50 text-emerald-700 shrink-0">Selesai</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">#SL-2026-8790 • 28 Agu 2026</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-sm text-gray-500">GrabExpress</span>
+                            <span class="text-base font-extrabold text-primary">Rp 45.000</span>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="showRiwayatDetail(4)" data-status="batal" class="ripple-dark w-full text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
+                        <span class="text-red-500 text-xl pointer-events-none" aria-hidden="true">✕</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-gray-800 text-base truncate">Jakarta Selatan → Denpasar</h4>
+                            <span class="status-badge bg-red-50 text-red-600 shrink-0">Dibatalkan</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">#SL-2026-8765 • 20 Agu 2026</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-sm text-gray-500">JNE Reguler</span>
+                            <span class="text-base font-extrabold text-primary">Rp 30.000</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Bottom Nav -->
+            <div class="lg:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full mobile-shell-width bg-white/90 backdrop-blur-xl border-t border-gray-100 px-4 py-3 pb-6 z-50">
+                <div class="flex justify-between items-center">
+                    <button onclick="goTo('home')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🏠</span>
+                        </div>
+                        <span class="text-xs font-semibold">Beranda</span>
+                    </button>
+                    <button onclick="goTo('riwayat')" class="nav-item active flex flex-col items-center gap-1 w-16">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple">
+                            <span class="text-base pointer-events-none" aria-hidden="true">🕑</span>
+                        </div>
+                        <span class="text-xs font-semibold">Riwayat</span>
+                    </button>
+                    <button onclick="goTo('profil')" class="nav-item flex flex-col items-center gap-1 w-16 text-gray-400">
+                        <div class="nav-icon w-11 h-11 rounded-2xl flex items-center justify-center relative ripple-dark">
+                            <span class="text-base pointer-events-none" aria-hidden="true">👤</span>
+                        </div>
+                        <span class="text-xs font-semibold">Profil</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: RIWAYAT DETAIL -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-riwayat-detail" class="page pb-32">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6 sticky top-0 z-30">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goTo('riwayat')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div class="min-w-0">
+                        <h1 class="text-white text-lg font-bold truncate" id="riwayat-detail-resi">#SL-2026-8843</h1>
+                        <p class="text-white/60 text-sm" id="riwayat-detail-date">5 Sep 2026</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-5 max-w-full">
+
+                <!-- Status Timeline -->
+                <div class="bg-white rounded-3xl p-5 card-shadow" id="riwayat-timeline-card">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Status Pesanan</p>
+                    <div class="flex items-start justify-between" id="riwayat-timeline">
+                        <div class="flex flex-col items-center flex-1 timeline-step">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center step-dot"><span aria-hidden="true">✓</span></div>
+                            <p class="text-xs text-gray-500 text-center mt-2 font-semibold leading-tight">Pesanan<br>Dibuat</p>
+                        </div>
+                        <div class="flex-1 h-0.5 mt-4 step-line"></div>
+                        <div class="flex flex-col items-center flex-1 timeline-step">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center step-dot"><span aria-hidden="true">✓</span></div>
+                            <p class="text-xs text-gray-500 text-center mt-2 font-semibold leading-tight">Dijemput</p>
+                        </div>
+                        <div class="flex-1 h-0.5 mt-4 step-line"></div>
+                        <div class="flex flex-col items-center flex-1 timeline-step">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center step-dot"><span aria-hidden="true">✓</span></div>
+                            <p class="text-xs text-gray-500 text-center mt-2 font-semibold leading-tight">Dalam<br>Perjalanan</p>
+                        </div>
+                        <div class="flex-1 h-0.5 mt-4 step-line"></div>
+                        <div class="flex flex-col items-center flex-1 timeline-step">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center step-dot"><span aria-hidden="true">✓</span></div>
+                            <p class="text-xs text-gray-500 text-center mt-2 font-semibold leading-tight">Terkirim</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="riwayat-cancelled-banner" class="hidden bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3">
+                    <span class="text-red-500 text-xl shrink-0" aria-hidden="true">✕</span>
+                    <div>
+                        <p class="font-bold text-red-700 text-base">Pesanan Dibatalkan</p>
+                        <p class="text-sm text-red-600">Dibatalkan sebelum dijemput kurir.</p>
+                    </div>
+                </div>
+
+                <!-- Route -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Rute Pengiriman</p>
+                    <div class="grid grid-cols-[28px_1fr] gap-x-3">
+                        <div class="row-span-2 flex flex-col items-center">
+                            <div class="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                            </div>
+                            <div class="route-line-fill flex-1 w-0.5 my-1.5"></div>
+                            <div class="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+                                <span class="text-primary text-sm" aria-hidden="true">📍</span>
+                            </div>
+                        </div>
+                        <div class="min-w-0 pb-4">
+                            <p class="text-xs text-gray-400 font-bold uppercase">Lokasi Penjemputan</p>
+                            <p class="text-base font-semibold text-gray-800 mt-1" id="riwayat-detail-pickup">Jakarta Selatan, Tebet</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-400 font-bold uppercase">Lokasi Tujuan</p>
+                            <p class="text-base font-semibold text-gray-800 mt-1" id="riwayat-detail-delivery">Surabaya, Wonokromo</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Package Details -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Detail Paket</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold uppercase">Berat</p>
+                            <p class="text-base font-bold text-gray-800 mt-0.5" id="riwayat-detail-weight">2.5 kg</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold uppercase">Isi Paket</p>
+                            <p class="text-base font-bold text-gray-800 mt-0.5" id="riwayat-detail-content">Skin Care, Pakaian</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Courier + Price (styled like the Total Pembayaran summary) -->
+                <div class="gradient-primary rounded-3xl p-5 shadow-lg shadow-primary/20 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="min-w-0">
+                            <p class="text-white/60 text-sm">Kurir</p>
+                            <p class="font-bold text-white text-base truncate" id="riwayat-detail-courier">J&T Express</p>
+                        </div>
+                        <p class="text-xl font-extrabold text-white shrink-0 ml-2" id="riwayat-detail-price">Rp 28.000</p>
+                    </div>
+                </div>
+
+                <div class="h-4"></div>
+            </div>
+
+            <!-- Sticky Bottom -->
+            <div class="sticky-bar bg-white/95 backdrop-blur-xl border-t border-gray-100 py-4">
+                <div class="page-content px-5">
+                    <button onclick="goTo('send')" class="w-full gradient-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 ripple flex items-center justify-center gap-2">
+                        <span class="pointer-events-none">Pesan Lagi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: LACAK PAKET (check progress paket) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-lacak" class="page pb-16">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goBack('home')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div>
+                        <h1 class="text-white text-xl font-bold">Lacak Pengiriman</h1>
+                        <p class="text-white/60 text-sm">Sukabumi Logistik</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-5 max-w-full">
+                <!-- Search -->
+                <div class="bg-white rounded-3xl card-shadow p-5">
+                    <label class="text-sm font-semibold text-gray-700">Lacak dengan nomor resi</label>
+                    <div class="flex gap-2 mt-1.5">
+                        <input id="lacak-input" type="text" placeholder="Contoh: SL-2026-8801" class="input-field flex-1 bg-gray-50 rounded-2xl px-4 py-3.5 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden" onkeydown="if(event.key==='Enter') searchLacak()">
+                        <button onclick="searchLacak()" class="ripple gradient-primary text-white font-bold px-5 rounded-2xl shrink-0">Lacak</button>
+                    </div>
+                    <p id="lacak-search-error" class="hidden text-sm text-red-500 font-semibold mt-2">Resi tidak ditemukan. Periksa kembali nomor resi kamu.</p>
+                </div>
+
+                <!-- Active list -->
+                <div>
+                    <h2 class="text-base font-bold text-gray-800 mb-3">Paket Sedang Berjalan</h2>
+                    <div class="grid-active-shipments">
+                        <button onclick="loadLacakDetail('SL-2026-9002')" class="ripple-dark text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center shrink-0">
+                                <span class="text-primary text-2xl" aria-hidden="true">📦</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base truncate">Jakarta → Surabaya</h4>
+                                    <span class="text-sm font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">Diantar</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">#SL-2026-9002 • DHL Express</p>
+                                <div class="flex items-center gap-3 mt-2.5">
+                                    <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-linear-to-r from-primary to-blue-500 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                    <span class="text-sm text-gray-400 font-semibold shrink-0">Hampir tiba</span>
+                                </div>
+                            </div>
+                        </button>
+                        <button onclick="loadLacakDetail('SL-2026-8801')" class="ripple-dark text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+                                <span class="text-orange-500 text-2xl" aria-hidden="true">🚚</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base truncate">Jakarta → Bandung</h4>
+                                    <span class="text-sm font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full shrink-0">Perjalanan</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">#SL-2026-8801 • SiCepat Express</p>
+                                <div class="flex items-center gap-3 mt-2.5">
+                                    <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-linear-to-r from-orange-400 to-amber-400 rounded-full" style="width: 50%"></div>
+                                    </div>
+                                    <span class="text-sm text-gray-400 font-semibold shrink-0">Di tengah jalan</span>
+                                </div>
+                            </div>
+                        </button>
+                        <button onclick="loadLacakDetail('SL-2026-9010')" class="ripple-dark text-left bg-white rounded-3xl p-4 card-shadow flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
+                                <span class="text-emerald-600 text-2xl" aria-hidden="true">✈</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start gap-2">
+                                    <h4 class="font-bold text-gray-800 text-base truncate">Denpasar → Singapura</h4>
+                                    <span class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full shrink-0">Dijemput</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">#SL-2026-9010 • Lion Parcel</p>
+                                <div class="flex items-center gap-3 mt-2.5">
+                                    <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-linear-to-r from-emerald-400 to-emerald-500 rounded-full" style="width: 15%"></div>
+                                    </div>
+                                    <span class="text-sm text-gray-400 font-semibold shrink-0">Baru dimulai</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: LACAK DETAIL (detail halaman progress paket) -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-lacak-detail" class="page pb-16">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6 sticky top-0 z-30">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goBack('lacak')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div class="min-w-0">
+                        <h1 class="text-white text-lg font-bold truncate" id="lacak-detail-resi">#SL-2026-9002</h1>
+                        <p class="text-white/60 text-sm">Detail progress paket</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-5 max-w-full">
+
+                <!-- Current status hero -->
+                <div class="gradient-primary rounded-3xl p-5 shadow-lg shadow-primary/20 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4"></div>
+                    <div class="relative z-10">
+                        <p class="text-white/60 text-sm font-semibold uppercase tracking-wide">Status Saat Ini</p>
+                        <p class="text-white text-xl font-bold mt-1" id="lacak-detail-status">Sedang Dalam Perjalanan</p>
+                        <p class="text-white/70 text-sm mt-2" id="lacak-detail-eta">Estimasi tiba hari ini</p>
+                    </div>
+                </div>
+
+                <!-- Progress timeline -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Perjalanan Paket</p>
+                    <div id="lacak-detail-timeline"></div>
+                </div>
+
+                <!-- Route -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Rute Pengiriman</p>
+                    <div class="grid grid-cols-[28px_1fr] gap-x-3">
+                        <div class="row-span-2 flex flex-col items-center">
+                            <div class="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                            </div>
+                            <div class="route-line-fill flex-1 w-0.5 my-1.5"></div>
+                            <div class="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+                                <span class="text-primary text-sm" aria-hidden="true">📍</span>
+                            </div>
+                        </div>
+                        <div class="min-w-0 pb-4">
+                            <p class="text-xs text-gray-400 font-bold uppercase">Lokasi Penjemputan</p>
+                            <p class="text-base font-semibold text-gray-800 mt-1" id="lacak-detail-pickup">Jakarta Selatan, Tebet</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-400 font-bold uppercase">Lokasi Tujuan</p>
+                            <p class="text-base font-semibold text-gray-800 mt-1" id="lacak-detail-delivery">Surabaya, Gubeng</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Package details -->
+                <div class="bg-white rounded-3xl p-5 card-shadow">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Detail Paket</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold uppercase">Berat</p>
+                            <p class="text-base font-bold text-gray-800 mt-0.5" id="lacak-detail-weight">3.0 kg</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400 font-semibold uppercase">Isi Paket</p>
+                            <p class="text-base font-bold text-gray-800 mt-0.5" id="lacak-detail-content">Peralatan Kantor</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Courier + price -->
+                <div class="bg-white rounded-3xl p-4 card-shadow flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-xs text-gray-400 font-semibold uppercase">Kurir</p>
+                        <p class="font-bold text-gray-800 text-base truncate" id="lacak-detail-courier">DHL Express</p>
+                    </div>
+                    <p class="text-xl font-extrabold text-primary shrink-0" id="lacak-detail-price">Rp 65.000</p>
+                </div>
+
+                <button onclick="goTo('lacak')" class="ripple-dark w-full bg-white border-2 border-gray-200 text-gray-700 font-bold text-base py-3.5 rounded-2xl flex items-center justify-center gap-2">
+                    <span class="pointer-events-none">Kembali ke Lacak Pengiriman</span>
+                </button>
+
+                <div class="h-4"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PAGE: ALAMAT TERSIMPAN -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div id="page-alamat" class="page pb-16">
+            <!-- Header -->
+            <div class="page-header gradient-primary px-5 pt-14 pb-6">
+                <div class="header-inner flex items-center gap-4">
+                    <button onclick="goBack('home')" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative shrink-0">
+                        <span class="absolute inset-0 rounded-xl ripple"></span>
+                        <span class="text-white pointer-events-none" aria-hidden="true">←</span>
+                    </button>
+                    <div>
+                        <h1 class="text-white text-xl font-bold">Alamat Tersimpan</h1>
+                        <p class="text-white/60 text-sm">Sukabumi Logistik</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-content px-5 pt-5 space-y-4 max-w-full">
+                <div class="grid-addresses" id="alamat-list"></div>
+
+                <button onclick="toggleAddAlamat(true)" id="alamat-add-btn" class="ripple-dark w-full bg-white border-2 border-dashed border-gray-200 text-primary font-bold text-base py-3.5 rounded-2xl flex items-center justify-center gap-2">
+                    <span class="pointer-events-none" aria-hidden="true">+</span>
+                    <span class="pointer-events-none">Tambah Alamat Baru</span>
+                </button>
+
+                <div id="alamat-form-card" class="hidden bg-white rounded-3xl p-5 card-shadow space-y-3">
+                    <h3 class="font-bold text-gray-800 text-base mb-1">Alamat Baru</h3>
+                    <div>
+                        <label class="text-sm font-semibold text-gray-700">Label Alamat</label>
+                        <select id="alamat-in-label" class="input-field w-full mt-1.5 bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 focus:outline-hidden appearance-none">
+                            <option>Rumah</option>
+                            <option>Kantor</option>
+                            <option>Lainnya</option>
+                        </select>
+                    </div>
+                    <input id="alamat-in-nama" type="text" placeholder="Nama Penerima" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                    <input id="alamat-in-telp" type="tel" placeholder="No. Telepon" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden">
+                    <textarea id="alamat-in-detail" rows="2" placeholder="Alamat lengkap (jalan, RT/RW, kelurahan, kota, kode pos)" class="input-field w-full bg-gray-50 rounded-2xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-hidden"></textarea>
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="toggleAddAlamat(false)" class="ripple-dark flex-1 bg-gray-100 text-gray-600 font-bold text-base py-3 rounded-2xl">Batal</button>
+                        <button onclick="saveAlamat()" class="ripple flex-1 gradient-primary text-white font-bold text-base py-3 rounded-2xl shadow-lg shadow-primary/20">Simpan Alamat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+</div>
+
+<script>
+    // ═══════════════════════════════════════════════════════════════
+    // Ripple effect (Google Meet style) - spawns a circle at the exact
+    // point the person pressed, on any .ripple / .ripple-dark element
+    // (event delegation, so this covers elements added later too).
+    // While the press is HELD DOWN the circle grows and stays fully
+    // visible; it only fades out once the person releases (pointerup),
+    // lifts off (pointercancel), or drags off the element (pointerleave).
+    // ═══════════════════════════════════════════════════════════════
+    document.addEventListener('pointerdown', function (e) {
+        const target = e.target.closest('.ripple, .ripple-dark');
+        if (!target) return;
+
+        const rect = target.getBoundingClientRect();
+        const dx = Math.max(e.clientX - rect.left, rect.width - (e.clientX - rect.left));
+        const dy = Math.max(e.clientY - rect.top, rect.height - (e.clientY - rect.top));
+        const size = Math.hypot(dx, dy) * 2;
+
+        const circle = document.createElement('span');
+        circle.className = 'ripple-circle';
+        circle.style.width = circle.style.height = size + 'px';
+        circle.style.left = (e.clientX - rect.left - size / 2) + 'px';
+        circle.style.top = (e.clientY - rect.top - size / 2) + 'px';
+        target.appendChild(circle);
+
+        requestAnimationFrame(() => circle.classList.add('grow'));
+
+        let released = false;
+        const release = () => {
+            if (released) return;
+            released = true;
+            circle.classList.add('release');
+            circle.addEventListener('transitionend', () => circle.remove(), { once: true });
+            setTimeout(() => circle.remove(), 500);
+            target.removeEventListener('pointerleave', release);
+        };
+        document.addEventListener('pointerup', release, { once: true });
+        document.addEventListener('pointercancel', release, { once: true });
+        target.addEventListener('pointerleave', release);
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // Navigation — page switching, history stack, sidebar + auth-mode sync
+    // ═══════════════════════════════════════════════════════════════
+    const authPages = ['login', 'register', 'forgot-password', 'forgot-sent', 'reset-password', 'reset-success'];
+    const sectionMap = {
+        home: 'home', profil: 'profil',
+        send: 'send', mitra: 'send', detail: 'send',
+        riwayat: 'riwayat', 'riwayat-detail': 'riwayat',
+        lacak: 'lacak', 'lacak-detail': 'lacak',
+        alamat: 'alamat'
+    };
+    let navHistory = [];
+
+    // Clicking a partner logo on the home page's "Mitra Pengiriman" row opens
+    // Kirim Paket, carrying forward which courier was tapped so it's already
+    // selected once the user reaches Pilih Kurir.
+    let pendingMitraName = null;
+    function openKirimWithMitra(mitraName) {
+        pendingMitraName = mitraName || null;
+        goTo('send');
+    }
+
+    function goTo(pageId, opts) {
+        opts = opts || {};
+        const currentEl = document.querySelector('.page.active');
+        if (currentEl) {
+            const currentId = currentEl.id.replace('page-', '');
+            if (currentId !== pageId && !opts.skipHistory) navHistory.push(currentId);
+        }
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('page-' + pageId);
+        if (target) target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (pageId === 'mitra' && pendingMitraName) {
+            const card = document.querySelector('.mitra-card[data-name="' + pendingMitraName + '"]');
+            if (card) selectMitra(card);
+            pendingMitraName = null;
+        }
+
+        const root = document.getElementById('app-root');
+        if (authPages.includes(pageId)) {
+            root.classList.add('auth-mode');
+        } else {
+            root.classList.remove('auth-mode');
+            updateSidebarActive(pageId);
+        }
+    }
+
+    function goBack(fallback) {
+        const prev = navHistory.pop();
+        goTo(prev || fallback || 'home', { skipHistory: true });
+    }
+
+    function updateSidebarActive(pageId) {
+        const section = sectionMap[pageId] || pageId;
+        document.querySelectorAll('.sidenav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.section === section);
+        });
+    }
+
+    // Toggle expandable details (Detail Pengirim / Detail Penerima)
+    function toggleDetails(id, btn) {
+        const el = document.getElementById(id);
+        btn.classList.toggle('rotated');
+        if (el.classList.contains('hidden')) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    }
+
+    // Show address preview
+    function showAddressPreview(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (input.value.length > 2) {
+            preview.classList.remove('hidden');
+        } else {
+            preview.classList.add('hidden');
+        }
+    }
+
+    // Instant Courier Toggle
+    function toggleInstant() {
+        const details = document.getElementById('instant-details');
+        const toggle = document.getElementById('instant-toggle');
+        if (toggle.checked) {
+            details.classList.remove('hidden');
+        } else {
+            details.classList.add('hidden');
+        }
+    }
+
+    // Swap route — actually swaps the pickup/delivery address text, not
+    // just a decorative spin.
+    function swapRoute() {
+        const btn = event.currentTarget;
+        btn.style.transform = 'rotate(180deg)';
+        setTimeout(() => btn.style.transform = 'rotate(0deg)', 300);
+
+        const pickupCity = document.getElementById('mitra-route-pickup-city');
+        const pickupArea = document.getElementById('mitra-route-pickup-area');
+        const deliveryCity = document.getElementById('mitra-route-delivery-city');
+        const deliveryArea = document.getElementById('mitra-route-delivery-area');
+        if (!pickupCity || !pickupArea || !deliveryCity || !deliveryArea) return;
+
+        [pickupCity.textContent, deliveryCity.textContent] = [deliveryCity.textContent, pickupCity.textContent];
+        [pickupArea.textContent, deliveryArea.textContent] = [deliveryArea.textContent, pickupArea.textContent];
+    }
+
+    // Show / hide the "Pilih Mitra" filter panel next to "Harga Terbaik"
+    function toggleFavoritFilter() {
+        const panel = document.getElementById('favorit-filter-panel');
+        const btn = document.getElementById('favorit-filter-btn');
+        panel.classList.toggle('hidden');
+        btn.classList.toggle('filter-btn-active');
+    }
+
+    // Mitra Filter (tabs)
+    function filterMitra(type) {
+        document.querySelectorAll('#page-mitra .tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.closest('.tab-btn').classList.add('active');
+
+        document.querySelectorAll('.mitra-card').forEach(card => {
+            if (type === 'all' || card.dataset.type === type) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Mitra Selection
+    const typeLabels = { regular: 'Reguler', instant: 'Instan', sameday: 'Same Day' };
+    let selectedMitra = null;
+    function selectMitra(card) {
+        document.querySelectorAll('.mitra-card').forEach(c => {
+            c.classList.remove('selected');
+            const btn = c.querySelector('.select-btn');
+            btn.textContent = 'Pilih';
+            btn.classList.remove('bg-emerald-600');
+            btn.classList.add('bg-primary');
+        });
+
+        card.classList.add('selected');
+        const btn = card.querySelector('.select-btn');
+        btn.textContent = 'Terpilih';
+        btn.classList.remove('bg-primary');
+        btn.classList.add('bg-emerald-600');
+
+        const name = card.dataset.name;
+        const price = card.dataset.price;
+        const eta = card.dataset.eta;
+        const typeLabel = typeLabels[card.dataset.type] || '';
+
+        document.getElementById('selected-mitra-name').textContent = name;
+        document.getElementById('selected-mitra-price').textContent = price;
+        document.getElementById('selected-mitra-meta').textContent = typeLabel + ' • ' + eta;
+        document.getElementById('mitra-summary').classList.remove('hidden');
+
+        selectedMitra = { name, price, type: typeLabel, eta };
+    }
+
+    // Detail Pesanan page - recap + running total
+    function parseRupiah(str) {
+        return parseInt(String(str).replace(/[^\d]/g, ''), 10) || 0;
+    }
+    function formatRupiah(n) {
+        return 'Rp ' + n.toLocaleString('id-ID');
+    }
+    function updateTotal() {
+        const ongkir = parseRupiah(document.getElementById('biaya-ongkir').textContent);
+        const insured = document.getElementById('insurance-toggle').checked;
+        const asuransi = insured ? 2000 : 0;
+        document.getElementById('biaya-asuransi').textContent = formatRupiah(asuransi);
+        document.getElementById('total-pembayaran').textContent = formatRupiah(ongkir + asuransi);
+    }
+    function goToDetailOrder() {
+        if (!selectedMitra) {
+            alert('Silakan pilih kurir terlebih dahulu');
+            return;
+        }
+        document.getElementById('detail-courier-name').textContent = selectedMitra.name;
+        document.getElementById('detail-courier-price').textContent = selectedMitra.price;
+        document.getElementById('detail-courier-eta').textContent = selectedMitra.type + ' • ' + selectedMitra.eta;
+        document.getElementById('biaya-ongkir').textContent = selectedMitra.price;
+        updateTotal();
+        goTo('detail');
+    }
+
+    // Riwayat (order history) + Detail Riwayat
+    const riwayatData = [
+        { id: 1, resi: '#SL-2026-8843', status: 'selesai', date: '5 Sep 2026', pickup: 'Jakarta Selatan, Tebet', delivery: 'Surabaya, Wonokromo', courier: 'J&T Express', price: 'Rp 28.000', weight: '2.5 kg', content: 'Skin Care, Pakaian' },
+        { id: 2, resi: '#SL-2026-8801', status: 'proses', date: '3 Sep 2026', pickup: 'Jakarta Selatan, Tebet', delivery: 'Bandung, Cibiru', courier: 'SiCepat Express', price: 'Rp 26.500', weight: '1.2 kg', content: 'Dokumen Penting' },
+        { id: 3, resi: '#SL-2026-8790', status: 'selesai', date: '28 Agu 2026', pickup: 'Jakarta Selatan, Tebet', delivery: 'Semarang, Pedurungan', courier: 'GrabExpress', price: 'Rp 45.000', weight: '0.8 kg', content: 'Aksesoris Fashion' },
+        { id: 4, resi: '#SL-2026-8765', status: 'batal', date: '20 Agu 2026', pickup: 'Jakarta Selatan, Tebet', delivery: 'Denpasar, Bali', courier: 'JNE Reguler', price: 'Rp 30.000', weight: '3.0 kg', content: 'Peralatan Elektronik' },
+    ];
+
+    function filterRiwayat(status) {
+        document.querySelectorAll('#page-riwayat .tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('.tab-btn').classList.add('active');
+
+        document.querySelectorAll('#riwayat-list > *').forEach(card => {
+            card.style.display = (status === 'all' || card.dataset.status === status) ? 'flex' : 'none';
+        });
+    }
+
+    function showRiwayatDetail(id) {
+        const order = riwayatData.find(o => o.id === id);
+        if (!order) return;
+
+        document.getElementById('riwayat-detail-resi').textContent = order.resi;
+        document.getElementById('riwayat-detail-date').textContent = order.date;
+        document.getElementById('riwayat-detail-pickup').textContent = order.pickup;
+        document.getElementById('riwayat-detail-delivery').textContent = order.delivery;
+        document.getElementById('riwayat-detail-courier').textContent = order.courier;
+        document.getElementById('riwayat-detail-price').textContent = order.price;
+        document.getElementById('riwayat-detail-weight').textContent = order.weight;
+        document.getElementById('riwayat-detail-content').textContent = order.content;
+
+        const timelineCard = document.getElementById('riwayat-timeline-card');
+        const cancelledBanner = document.getElementById('riwayat-cancelled-banner');
+
+        if (order.status === 'batal') {
+            timelineCard.classList.add('hidden');
+            cancelledBanner.classList.remove('hidden');
+        } else {
+            timelineCard.classList.remove('hidden');
+            cancelledBanner.classList.add('hidden');
+            const stepsCompleted = order.status === 'selesai' ? 4 : 2;
+            document.querySelectorAll('#riwayat-timeline .timeline-step').forEach((el, i) => {
+                el.classList.toggle('completed', i < stepsCompleted);
+            });
+            document.querySelectorAll('#riwayat-timeline .step-line').forEach((el, i) => {
+                el.classList.toggle('completed', i < stepsCompleted - 1);
+            });
+        }
+
+        goTo('riwayat-detail');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Auth flow — Login / Register / Lupa Password (magic link), dummy
+    // ═══════════════════════════════════════════════════════════════
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const isPwd = input.type === 'password';
+        input.type = isPwd ? 'text' : 'password';
+        btn.textContent = isPwd ? '🙈' : '👁';
+    }
+
+    function doLogin() {
+        goTo('home');
+    }
+
+    function doRegister() {
+        const nama = document.getElementById('reg-nama').value.trim();
+        alert('Akun berhasil dibuat! Selamat datang' + (nama ? ', ' + nama : '') + '.');
+        goTo('home');
+    }
+
+    function sendMagicLink() {
+        const email = document.getElementById('fp-email').value.trim();
+        document.getElementById('fp-sent-email').textContent = email || 'email kamu';
+        goTo('forgot-sent');
+    }
+
+    function doResetPassword() {
+        const p1 = document.getElementById('rp-password').value;
+        const p2 = document.getElementById('rp-password-confirm').value;
+        if (!p1 || p1.length < 8) { alert('Password minimal 8 karakter'); return; }
+        if (p1 !== p2) { alert('Konfirmasi password tidak cocok'); return; }
+        goTo('reset-success');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Lacak Pengiriman — shared dummy tracking dataset
+    // ═══════════════════════════════════════════════════════════════
+    const shipmentData = {
+        'SL-2026-8843': {
+            resi: 'SL-2026-8843', courier: 'J&T Express', price: 'Rp 28.000', weight: '2.5 kg', content: 'Skin Care, Pakaian',
+            pickup: { city: 'Jakarta Selatan', area: 'Tebet' }, delivery: { city: 'Surabaya', area: 'Wonokromo' },
+            status: 'Paket Sudah Diterima', eta: 'Diterima 7 Sep 2026, 10:20',
+            timeline: [
+                { title: 'Pesanan Dibuat', location: 'Jakarta Selatan, Tebet', time: '5 Sep 2026, 09:15', done: true },
+                { title: 'Paket Dijemput Kurir', location: 'Jakarta Selatan, Tebet', time: '5 Sep 2026, 11:40', done: true },
+                { title: 'Tiba di Gudang Sortir', location: 'Jakarta Timur', time: '5 Sep 2026, 16:20', done: true },
+                { title: 'Tiba di Kota Tujuan', location: 'Surabaya', time: '6 Sep 2026, 20:10', done: true },
+                { title: 'Paket Diterima', location: 'Surabaya, Wonokromo', time: '7 Sep 2026, 10:20', done: true },
+            ]
+        },
+        'SL-2026-8801': {
+            resi: 'SL-2026-8801', courier: 'SiCepat Express', price: 'Rp 26.500', weight: '1.2 kg', content: 'Dokumen Penting',
+            pickup: { city: 'Jakarta Selatan', area: 'Tebet' }, delivery: { city: 'Bandung', area: 'Cibiru' },
+            status: 'Sedang Dalam Perjalanan', eta: 'Estimasi tiba besok, sebelum 18:00',
+            timeline: [
+                { title: 'Pesanan Dibuat', location: 'Jakarta Selatan, Tebet', time: '3 Sep 2026, 08:05', done: true },
+                { title: 'Paket Dijemput Kurir', location: 'Jakarta Selatan, Tebet', time: '3 Sep 2026, 10:30', done: true },
+                { title: 'Tiba di Gudang Sortir', location: 'Jakarta Timur', time: '3 Sep 2026, 15:00', done: true },
+                { title: 'Dalam Perjalanan ke Kota Tujuan', location: 'Menuju Bandung', time: '4 Sep 2026, 07:15', current: true },
+                { title: 'Tiba di Kota Tujuan', location: 'Bandung', time: 'Menunggu', done: false },
+                { title: 'Paket Diterima', location: 'Bandung, Cibiru', time: 'Menunggu', done: false },
+            ]
+        },
+        'SL-2026-9002': {
+            resi: 'SL-2026-9002', courier: 'DHL Express', price: 'Rp 65.000', weight: '3.0 kg', content: 'Peralatan Kantor',
+            pickup: { city: 'Jakarta Selatan', area: 'Tebet' }, delivery: { city: 'Surabaya', area: 'Gubeng' },
+            status: 'Paket Sedang Diantar', eta: 'Estimasi tiba hari ini, sebelum 15:00',
+            timeline: [
+                { title: 'Pesanan Dibuat', location: 'Jakarta Selatan, Tebet', time: '6 Sep 2026, 09:00', done: true },
+                { title: 'Paket Dijemput Kurir', location: 'Jakarta Selatan, Tebet', time: '6 Sep 2026, 11:10', done: true },
+                { title: 'Tiba di Gudang Sortir', location: 'Jakarta Timur', time: '6 Sep 2026, 17:30', done: true },
+                { title: 'Tiba di Kota Tujuan', location: 'Surabaya', time: '8 Sep 2026, 06:00', done: true },
+                { title: 'Paket Sedang Diantar ke Alamat Tujuan', location: 'Surabaya, Gubeng', time: '9 Sep 2026, 08:45', current: true },
+                { title: 'Paket Diterima', location: 'Surabaya, Gubeng', time: 'Menunggu', done: false },
+            ]
+        },
+        'SL-2026-9010': {
+            resi: 'SL-2026-9010', courier: 'Lion Parcel', price: 'Rp 120.000', weight: '0.8 kg', content: 'Dokumen Ekspor',
+            pickup: { city: 'Denpasar', area: 'Bali' }, delivery: { city: 'Singapura', area: 'Changi' },
+            status: 'Baru Dijemput Kurir', eta: 'Estimasi tiba 2-3 hari kerja',
+            timeline: [
+                { title: 'Pesanan Dibuat', location: 'Denpasar, Bali', time: '9 Sep 2026, 07:30', done: true },
+                { title: 'Paket Dijemput Kurir', location: 'Denpasar, Bali', time: '9 Sep 2026, 09:00', current: true },
+                { title: 'Tiba di Gudang Sortir', location: 'Denpasar', time: 'Menunggu', done: false },
+                { title: 'Proses Bea Cukai', location: 'Ekspor', time: 'Menunggu', done: false },
+                { title: 'Tiba di Negara Tujuan', location: 'Singapura', time: 'Menunggu', done: false },
+                { title: 'Paket Diterima', location: 'Singapura, Changi', time: 'Menunggu', done: false },
+            ]
+        }
+    };
+
+    function normalizeResi(v) {
+        return String(v || '').trim().toUpperCase().replace(/^#/, '');
+    }
+
+    function renderTimeline(containerEl, timeline) {
+        containerEl.innerHTML = timeline.map((step, i) => {
+            const stateClass = step.done ? 'done' : (step.current ? 'current' : '');
+            const dotContent = step.done ? '✓' : (step.current ? '●' : (i + 1));
+            const isLast = i === timeline.length - 1;
+            return `
+                <div class="timeline-v-item ${stateClass} flex gap-3">
+                    <div class="flex flex-col items-center">
+                        <div class="timeline-v-dot">${dotContent}</div>
+                        ${isLast ? '' : '<div class="timeline-v-line"></div>'}
+                    </div>
+                    <div class="${isLast ? '' : 'pb-6'} min-w-0 flex-1">
+                        <p class="text-sm font-bold ${step.current ? 'text-primary' : 'text-gray-800'}">${step.title}</p>
+                        <p class="text-sm text-gray-500 mt-0.5">${step.location}</p>
+                        <p class="text-xs text-gray-400 mt-1 font-semibold">${step.time}</p>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function searchLacak() {
+        const input = document.getElementById('lacak-input');
+        const key = normalizeResi(input.value);
+        const err = document.getElementById('lacak-search-error');
+        if (shipmentData[key]) {
+            err.classList.add('hidden');
+            loadLacakDetail(key);
+        } else {
+            err.classList.remove('hidden');
+        }
+    }
+
+    function loadLacakDetail(key) {
+        const data = shipmentData[key];
+        if (!data) return;
+        document.getElementById('lacak-detail-resi').textContent = '#' + data.resi;
+        document.getElementById('lacak-detail-status').textContent = data.status;
+        document.getElementById('lacak-detail-eta').textContent = data.eta;
+        document.getElementById('lacak-detail-pickup').textContent = data.pickup.city + ', ' + data.pickup.area;
+        document.getElementById('lacak-detail-delivery').textContent = data.delivery.city + ', ' + data.delivery.area;
+        document.getElementById('lacak-detail-weight').textContent = data.weight;
+        document.getElementById('lacak-detail-content').textContent = data.content;
+        document.getElementById('lacak-detail-courier').textContent = data.courier;
+        document.getElementById('lacak-detail-price').textContent = data.price;
+        renderTimeline(document.getElementById('lacak-detail-timeline'), data.timeline);
+        goTo('lacak-detail');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Alamat Tersimpan — dummy, in-memory CRUD
+    // ═══════════════════════════════════════════════════════════════
+    let alamatData = [
+        { id: 1, label: 'Rumah', main: true, nama: 'Fulan', telp: '0812-3456-7890', alamat: 'Jl. Tebet Barat Dalam No. 12, RT 04/RW 02, Tebet, Jakarta Selatan, 12810' },
+        { id: 2, label: 'Kantor', main: false, nama: 'Fulan', telp: '0812-3456-7890', alamat: 'Jl. Sudirman Kav. 25, Lantai 8, Jakarta Pusat, 10220' },
+    ];
+    let alamatNextId = 3;
+
+    function renderAlamat() {
+        const list = document.getElementById('alamat-list');
+        if (!list) return;
+        list.innerHTML = alamatData.map(a => `
+            <div class="bg-white rounded-3xl p-4 card-shadow">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="status-badge bg-primary-light text-primary">${a.label}</span>
+                        ${a.main ? '<span class="status-badge bg-secondary-light text-secondary">Utama</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="alert('Fitur edit alamat akan segera hadir')" class="ripple-dark w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"><span class="pointer-events-none" aria-hidden="true">✎</span></button>
+                        <button onclick="deleteAlamat(${a.id})" class="ripple-dark w-8 h-8 rounded-lg flex items-center justify-center text-red-400"><span class="pointer-events-none" aria-hidden="true">🗑</span></button>
+                    </div>
+                </div>
+                <p class="font-bold text-gray-800 text-base">${a.nama}</p>
+                <p class="text-sm text-gray-500 mt-0.5">${a.telp}</p>
+                <p class="text-sm text-gray-600 mt-2 leading-relaxed">${a.alamat}</p>
+            </div>
+        `).join('');
+    }
+
+    function deleteAlamat(id) {
+        alamatData = alamatData.filter(a => a.id !== id);
+        renderAlamat();
+    }
+
+    function toggleAddAlamat(show) {
+        document.getElementById('alamat-form-card').classList.toggle('hidden', !show);
+        document.getElementById('alamat-add-btn').classList.toggle('hidden', show);
+    }
+
+    function saveAlamat() {
+        const label = document.getElementById('alamat-in-label').value;
+        const nama = document.getElementById('alamat-in-nama').value.trim();
+        const telp = document.getElementById('alamat-in-telp').value.trim();
+        const alamat = document.getElementById('alamat-in-detail').value.trim();
+        if (!nama || !telp || !alamat) { alert('Lengkapi semua data alamat terlebih dahulu'); return; }
+        alamatData.push({ id: alamatNextId++, label, main: false, nama, telp, alamat });
+        renderAlamat();
+        document.getElementById('alamat-in-nama').value = '';
+        document.getElementById('alamat-in-telp').value = '';
+        document.getElementById('alamat-in-detail').value = '';
+        toggleAddAlamat(false);
+    }
+
+    renderAlamat();
+</script>
+</body>
+</html>
