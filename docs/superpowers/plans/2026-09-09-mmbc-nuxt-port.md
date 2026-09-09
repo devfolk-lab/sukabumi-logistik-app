@@ -57,7 +57,8 @@ app/
   types/index.ts              Courier, PartnerBadge, Order, Shipment, Address, User
   utils/format.ts             formatRupiah, normalizeResi
   utils/ripple.ts             rippleGeometry (pure, tested)
-  plugins/ripple.client.ts    v-ripple directive
+  plugins/ripple.ts           v-ripple directive (universal — must register on the
+                              server too, or SSR cannot resolve the directive)
   composables/useAppNav.ts    back-with-fallback
   stores/                     couriers, shipments, orders, addresses, booking, auth
   layouts/                    default.vue, auth.vue
@@ -1280,7 +1281,7 @@ git commit -m "feat: add auth store"
 ### Task 9: Ripple directive and navigation composable
 
 **Files:**
-- Create: `app/utils/ripple.ts`, `test/ripple.test.ts`, `app/plugins/ripple.client.ts`, `app/composables/useAppNav.ts`
+- Create: `app/utils/ripple.ts`, `test/ripple.test.ts`, `app/plugins/ripple.ts`, `app/composables/useAppNav.ts`
 
 **Interfaces:**
 - Consumes: nothing
@@ -1363,7 +1364,7 @@ Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Write the directive**
 
-Create `app/plugins/ripple.client.ts`. Behaviour ported from prototype lines 2505–2534: the circle grows and holds while pressed, and only fades on `pointerup` / `pointercancel` / `pointerleave`.
+Create `app/plugins/ripple.ts`. Behaviour ported from prototype lines 2505–2534: the circle grows and holds while pressed, and only fades on `pointerup` / `pointercancel` / `pointerleave`.
 
 ```ts
 import { rippleGeometry } from '~/utils/ripple'
@@ -1433,7 +1434,7 @@ export function useAppNav() {
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test
-git add app/utils/ripple.ts test/ripple.test.ts app/plugins/ripple.client.ts app/composables/useAppNav.ts
+git add app/utils/ripple.ts test/ripple.test.ts app/plugins/ripple.ts app/composables/useAppNav.ts
 git commit -m "feat: add ripple directive and navigation composable"
 ```
 

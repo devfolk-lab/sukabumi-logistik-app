@@ -234,7 +234,7 @@ nothing used it.
 
 The Google-Meet-style press ripple is real interaction, not decoration: the circle
 grows and *holds* while pressed, and only fades on release. It survives as a
-`v-ripple` directive registered in `app/plugins/ripple.client.ts`, with a `.dark`
+`v-ripple` directive registered in `app/plugins/ripple.ts`, with a `.dark`
 modifier (`v-ripple.dark`) for the light-background variant. This replaces the
 document-level `pointerdown` delegation, which only existed because the prototype had
 no component lifecycle to hook.
