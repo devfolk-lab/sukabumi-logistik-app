@@ -7,6 +7,7 @@ const auth = useAuthStore()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const rememberMe = ref(false)
 
 async function submit() {
   auth.login(email.value.trim() || 'fulan@email.com')
@@ -20,7 +21,7 @@ async function submit() {
       Masuk ke akun kamu
     </h1>
     <p class="mt-1.5 text-sm text-gray-500">
-      Kelola semua pengiriman dari satu tempat.
+      Kelola pengiriman paketmu lebih mudah.
     </p>
 
     <form
@@ -59,7 +60,11 @@ async function submit() {
         </UInput>
       </UFormField>
 
-      <div class="flex justify-end">
+      <div class="flex items-center justify-between">
+        <UCheckbox
+          v-model="rememberMe"
+          label="Ingat saya"
+        />
         <NuxtLink
           to="/lupa-password"
           class="text-sm font-semibold text-primary"

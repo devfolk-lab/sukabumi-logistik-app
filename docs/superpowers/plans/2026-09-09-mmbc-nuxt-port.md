@@ -1839,7 +1839,7 @@ async function submit() {
 <template>
   <div>
     <h1 class="text-2xl font-extrabold text-gray-800">Masuk ke akun kamu</h1>
-    <p class="mt-1.5 text-sm text-gray-500">Kelola semua pengiriman dari satu tempat.</p>
+    <p class="mt-1.5 text-sm text-gray-500">Kelola pengiriman paketmu lebih mudah.</p>
 
     <form
       class="mt-8 space-y-4"

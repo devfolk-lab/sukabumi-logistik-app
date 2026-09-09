@@ -17,12 +17,12 @@ const actions = [
       >
         <div
           v-ripple.dark
-          class="flex size-14 items-center justify-center rounded-2xl"
+          class="flex size-14 items-center justify-center rounded-2xl lg:size-11"
           :class="action.iconClass"
         >
           <UIcon
             :name="action.icon"
-            class="pointer-events-none size-6"
+            class="pointer-events-none size-6 lg:size-4.5"
           />
         </div>
         <span class="text-center text-sm font-semibold text-gray-700">{{ action.label }}</span>

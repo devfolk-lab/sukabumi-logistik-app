@@ -23,13 +23,17 @@ const shipments = useShipmentsStore()
           </h1>
         </div>
         <button
-          v-ripple
           type="button"
-          class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10"
+          class="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10"
+          aria-label="Notifikasi"
         >
+          <span
+            v-ripple
+            class="absolute inset-0 rounded-2xl"
+          />
           <UIcon
             name="i-lucide-bell"
-            class="pointer-events-none size-5 text-white"
+            class="relative z-10 size-5 text-white pointer-events-none"
           />
           <span class="pointer-events-none absolute -top-1.5 -right-1.5 z-20 flex size-6 items-center justify-center rounded-full border-2 border-[#002144] bg-red-500 text-sm font-bold text-white">3</span>
         </button>
