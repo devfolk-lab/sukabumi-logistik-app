@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
-
 const items = [
   { label: 'Beranda', to: '/', icon: 'i-lucide-house' },
   { label: 'Kirim Paket', to: '/kirim', icon: 'i-lucide-package' },
@@ -11,14 +9,15 @@ const items = [
 ]
 
 const route = useRoute()
-const auth = useAuthStore()
+const { logout: signOut } = useAuthActions()
+const { data: profile } = useProfile()
 
 function isActive(to: string): boolean {
   return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
 }
 
 async function logout() {
-  auth.logout()
+  await signOut()
   await navigateTo('/login')
 }
 </script>
@@ -64,10 +63,10 @@ async function logout() {
         </span>
         <div class="min-w-0">
           <p class="truncate text-sm font-bold text-gray-800">
-            {{ auth.user?.nama ?? 'Fulan' }}
+            {{ profile?.nama ?? '...' }}
           </p>
           <p class="truncate text-xs text-gray-400">
-            {{ auth.user?.email ?? 'fulan@email.com' }}
+            {{ profile?.email ?? '' }}
           </p>
         </div>
       </div>

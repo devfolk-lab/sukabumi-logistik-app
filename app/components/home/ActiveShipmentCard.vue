@@ -41,7 +41,7 @@ const progress = computed(() => {
             :style="{ width: progress + '%' }"
           />
         </div>
-        <span class="shrink-0 text-sm font-semibold text-gray-400">{{ shipment.status }}</span>
+        <span class="shrink-0 text-sm font-semibold text-gray-400">{{ shipment.eta }}</span>
       </div>
     </div>
   </div>

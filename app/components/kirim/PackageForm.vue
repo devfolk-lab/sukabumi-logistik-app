@@ -27,23 +27,20 @@ const booking = useBookingStore()
         <!-- Pickup -->
         <div class="min-w-0 pb-4">
           <label class="text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Penjemputan</label>
-          <UInput
-            v-model="booking.pickup.city"
-            placeholder="Cari kecamatan..."
-            size="xl"
-            trailing-icon="i-lucide-search"
-            class="mt-1.5 w-full"
+          <AppDestinationSelect
+            v-model="booking.origin"
+            class="mt-1.5"
           />
           <div
-            v-show="booking.pickup.city.length > 2"
+            v-if="booking.origin"
             class="mt-2 flex items-start gap-2 rounded-xl bg-primary-50 p-3"
           >
             <UIcon
               name="i-lucide-map-pin"
               class="mt-0.5 size-4 shrink-0 text-primary"
             />
-            <p class="text-base font-semibold text-primary">
-              {{ booking.pickup.city }}
+            <p class="text-sm font-semibold text-primary">
+              {{ booking.origin.label }}
             </p>
           </div>
         </div>
@@ -51,23 +48,20 @@ const booking = useBookingStore()
         <!-- Delivery -->
         <div class="min-w-0">
           <label class="text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Tujuan</label>
-          <UInput
-            v-model="booking.delivery.city"
-            placeholder="Cari kecamatan..."
-            size="xl"
-            trailing-icon="i-lucide-search"
-            class="mt-1.5 w-full"
+          <AppDestinationSelect
+            v-model="booking.destination"
+            class="mt-1.5"
           />
           <div
-            v-show="booking.delivery.city.length > 2"
+            v-if="booking.destination"
             class="mt-2 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3"
           >
             <UIcon
               name="i-lucide-map-pin"
               class="mt-0.5 size-4 shrink-0 text-amber-600"
             />
-            <p class="text-base font-semibold text-amber-700">
-              {{ booking.delivery.city }}
+            <p class="text-sm font-semibold text-amber-700">
+              {{ booking.destination.label }}
             </p>
           </div>
         </div>
@@ -94,6 +88,8 @@ const booking = useBookingStore()
             <UInput
               v-model.number="booking.weight"
               type="number"
+              step="0.1"
+              min="0.1"
               placeholder="0.0"
               size="xl"
               class="w-full"

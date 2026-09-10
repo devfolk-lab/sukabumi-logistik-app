@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { useShipmentsStore } from '~/stores/shipments'
-
-const shipments = useShipmentsStore()
 const input = ref('')
-const notFound = ref(false)
+const error = ref('')
 
 async function search() {
-  const found = shipments.findByResi(input.value)
-  notFound.value = !found
-  if (found) await navigateTo(`/lacak/${found.resi}`)
+  const resi = normalizeResi(input.value)
+
+  if (!resi) {
+    error.value = 'Masukkan nomor resi terlebih dahulu.'
+    return
+  }
+
+  error.value = ''
+  await navigateTo(`/lacak/${resi}`)
 }
 </script>
 
@@ -40,10 +43,10 @@ async function search() {
       </button>
     </div>
     <p
-      v-if="notFound"
+      v-if="error"
       class="mt-2 text-sm font-semibold text-red-500"
     >
-      Resi tidak ditemukan. Periksa kembali nomor resi kamu.
+      {{ error }}
     </p>
   </div>
 </template>

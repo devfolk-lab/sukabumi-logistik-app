@@ -1,0 +1,139 @@
+// Prisma schema for Sukabumi Logistik.
+//
+// Identity lives in Supabase's `auth` schema and is NOT managed here; `Profile.id`
+// mirrors `auth.users.id` and is created on first authenticated request.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  MENUNGGU_PEMBAYARAN
+  DIPROSES
+  DIJEMPUT
+  DALAM_PERJALANAN
+  SELESAI
+  BATAL
+}
+
+enum CourierType {
+  REGULAR
+  SAMEDAY
+  INSTANT
+}
+
+model Profile {
+  id        String   @id @db.Uuid
+  nama      String
+  email     String
+  telp      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+
+  @@map("profiles")
+}
+
+model Address {
+  id        String  @id @default(uuid()) @db.Uuid
+  profileId String  @db.Uuid
+  label     String
+  nama      String
+  telp      String
+  alamat    String
+
+  // RajaOngkir V2 subdistrict, captured when the address is saved so orders
+  // placed from it do not need to re-resolve the destination.
+  destinationId    Int?
+  destinationLabel String?
+  zipCode          String?
+
+  isMain    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("addresses")
+}
+
+model Order {
+  id        String @id @default(uuid()) @db.Uuid
+  profileId String @db.Uuid
+
+  // Human-facing reference, e.g. SL-2026-8843.
+  orderNo String      @unique
+  status  OrderStatus @default(MENUNGGU_PEMBAYARAN)
+
+  // Party snapshots — orders must stay readable after an address is edited.
+  senderNama     String
+  senderTelp     String
+  senderAlamat   String
+  receiverNama   String
+  receiverTelp   String
+  receiverAlamat String
+
+  originId       Int
+  originLabel    String
+  originCity     String
+  originArea     String
+  destinationId  Int
+  destinationLabel String
+  destinationCity  String
+  destinationArea  String
+
+  courierCode String
+  courierName String
+  serviceCode String
+  serviceName String
+  courierType CourierType @default(REGULAR)
+  etd         String?
+
+  weightGram Int
+  content    String
+
+  shippingCost Int
+  insuranceFee Int @default(0)
+  total        Int
+  insured      Boolean @default(false)
+
+  // Set once the shipment is handed to the courier via Komship.
+  awb            String?
+  komshipOrderId String?
+  komshipOrderNo String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile        Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  trackingEvents TrackingEvent[]
+
+  @@index([profileId, createdAt])
+  @@index([awb])
+  @@map("orders")
+}
+
+model TrackingEvent {
+  id      String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+
+  title      String
+  location   String?
+  occurredAt DateTime
+
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, title, occurredAt])
+  @@index([orderId, occurredAt])
+  @@map("tracking_events")
+}

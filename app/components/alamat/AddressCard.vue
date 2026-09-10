@@ -3,13 +3,10 @@ import type { Address } from '~/types'
 
 defineProps<{ address: Address }>()
 
-const emit = defineEmits<{ remove: [id: number] }>()
-
-const toast = useToast()
-
-function edit() {
-  toast.add({ title: 'Fitur edit alamat akan segera hadir' })
-}
+const emit = defineEmits<{
+  remove: [id: string]
+  setMain: [id: string]
+}>()
 </script>
 
 <template>
@@ -34,14 +31,15 @@ function edit() {
       </div>
       <div class="flex shrink-0 items-center gap-1">
         <button
+          v-if="!address.main"
           v-ripple.dark
           type="button"
           class="flex size-8 items-center justify-center rounded-lg text-gray-400"
-          aria-label="Edit alamat"
-          @click="edit"
+          aria-label="Jadikan alamat utama"
+          @click="emit('setMain', address.id)"
         >
           <UIcon
-            name="i-lucide-pencil"
+            name="i-lucide-star"
             class="pointer-events-none size-4"
           />
         </button>
@@ -67,6 +65,16 @@ function edit() {
     </p>
     <p class="mt-2 text-sm leading-relaxed text-gray-600">
       {{ address.alamat }}
+    </p>
+    <p
+      v-if="address.destinationLabel"
+      class="mt-2 flex items-start gap-1.5 text-xs font-semibold text-gray-400"
+    >
+      <UIcon
+        name="i-lucide-map-pin"
+        class="mt-0.5 size-3.5 shrink-0"
+      />
+      {{ address.destinationLabel }}
     </p>
   </div>
 </template>

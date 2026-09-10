@@ -1,6 +1,11 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 
+const { updatePassword } = useAuthActions()
+const user = useSupabaseUser()
+const toast = useToast()
+
+const pending = ref(false)
 const password = ref('')
 const confirm = ref('')
 const showPassword = ref(false)
@@ -10,11 +15,26 @@ const errors = computed(() => ({
   confirm: confirm.value.length > 0 && confirm.value !== password.value ? 'Konfirmasi password tidak cocok' : undefined
 }))
 
-const canSubmit = computed(() => password.value.length >= 8 && password.value === confirm.value)
+const canSubmit = computed(() =>
+  Boolean(user.value) && password.value.length >= 8 && password.value === confirm.value
+)
 
 async function submit() {
-  if (!canSubmit.value) return
-  await navigateTo('/reset-password/berhasil')
+  if (!canSubmit.value || pending.value) return
+  pending.value = true
+
+  try {
+    await updatePassword(password.value)
+    await navigateTo('/reset-password/berhasil')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal menyimpan password',
+      description: (error as Error).message,
+      color: 'error'
+    })
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -29,8 +49,21 @@ async function submit() {
     <h1 class="mt-6 text-center text-2xl font-extrabold text-gray-800">
       Buat password baru
     </h1>
-    <p class="mt-2 text-center text-sm text-gray-500">
+    <p
+      v-if="user"
+      class="mt-2 text-center text-sm text-gray-500"
+    >
       Link magic kamu valid. Buat password baru untuk akun ini.
+    </p>
+    <p
+      v-else
+      class="mt-2 text-center text-sm font-semibold text-red-500"
+    >
+      Link ini sudah kedaluwarsa atau tidak valid.
+      <NuxtLink
+        to="/lupa-password"
+        class="font-bold text-primary"
+      >Minta link baru</NuxtLink>.
     </p>
 
     <form
@@ -81,6 +114,7 @@ async function submit() {
         size="xl"
         block
         class="font-bold"
+        :loading="pending"
         :disabled="!canSubmit"
       >
         Simpan Password Baru

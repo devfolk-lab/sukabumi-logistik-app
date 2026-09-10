@@ -1,8 +1,20 @@
 <script setup lang="ts">
-import type { Address } from '~/types'
+import type { Destination } from '~/types'
+
+export interface AddressFormPayload {
+  label: string
+  nama: string
+  telp: string
+  alamat: string
+  destinationId: number | null
+  destinationLabel: string | null
+  zipCode: string | null
+}
+
+const props = defineProps<{ pending?: boolean }>()
 
 const emit = defineEmits<{
-  submit: [payload: Omit<Address, 'id' | 'main'>]
+  submit: [payload: AddressFormPayload]
   cancel: []
 }>()
 
@@ -15,10 +27,15 @@ const form = reactive({
   alamat: ''
 })
 
+const destination = ref<Destination | undefined>()
+
 const touched = reactive({ nama: false, telp: false, alamat: false })
 
 const canSubmit = computed(() =>
-  form.nama.trim() !== '' && form.telp.trim() !== '' && form.alamat.trim() !== ''
+  !props.pending
+  && form.nama.trim() !== ''
+  && form.telp.trim() !== ''
+  && form.alamat.trim() !== ''
 )
 
 const namaError = computed(() => touched.nama && form.nama.trim() === '' ? 'Wajib diisi' : undefined)
@@ -30,11 +47,15 @@ function submit() {
   touched.telp = true
   touched.alamat = true
   if (!canSubmit.value) return
+
   emit('submit', {
     label: form.label,
     nama: form.nama.trim(),
     telp: form.telp.trim(),
-    alamat: form.alamat.trim()
+    alamat: form.alamat.trim(),
+    destinationId: destination.value?.id ?? null,
+    destinationLabel: destination.value?.label ?? null,
+    zipCode: destination.value?.zipCode ?? null
   })
 }
 </script>
@@ -82,6 +103,13 @@ function submit() {
     </UFormField>
 
     <UFormField
+      label="Kecamatan / Kelurahan"
+      help="Dipakai untuk menghitung ongkir saat memesan dari alamat ini."
+    >
+      <AppDestinationSelect v-model="destination" />
+    </UFormField>
+
+    <UFormField
       label="Alamat Lengkap"
       :error="alamatError"
     >
@@ -115,7 +143,7 @@ function submit() {
           v-ripple
           class="absolute inset-0 rounded-2xl"
         />
-        <span class="relative z-10 pointer-events-none">Simpan Alamat</span>
+        <span class="relative z-10 pointer-events-none">{{ pending ? 'Menyimpan...' : 'Simpan Alamat' }}</span>
       </button>
     </div>
   </div>

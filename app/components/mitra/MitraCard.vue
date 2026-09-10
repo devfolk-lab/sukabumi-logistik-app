@@ -7,7 +7,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [id: string]
+  select: [courier: Courier]
 }>()
 
 const typeMeta: Record<Courier['type'], { label: string, icon: string, color: 'info' | 'warning', extraClass?: string }> = {
@@ -24,7 +24,7 @@ const meta = computed(() => typeMeta[props.courier.type])
     v-ripple.dark
     class="cursor-pointer overflow-hidden rounded-3xl border-2 bg-white shadow-card transition-all duration-250 lg:shadow-card-flat lg:hover:-translate-y-0.5"
     :class="selected ? 'border-primary bg-[#f0f7ff] shadow-xl shadow-primary/12' : 'border-transparent'"
-    @click="emit('select', courier.id)"
+    @click="emit('select', courier)"
   >
     <div class="p-4">
       <div class="flex items-start gap-3">
@@ -44,9 +44,14 @@ const meta = computed(() => typeMeta[props.courier.type])
         </span>
         <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-2">
-            <h4 class="text-base leading-tight font-bold text-gray-800">
-              {{ courier.name }}
-            </h4>
+            <div class="min-w-0">
+              <h4 class="truncate text-base leading-tight font-bold text-gray-800">
+                {{ courier.name }}
+              </h4>
+              <p class="mt-0.5 truncate text-sm text-gray-500">
+                {{ courier.serviceName }}
+              </p>
+            </div>
             <UBadge
               :color="meta.color"
               variant="soft"

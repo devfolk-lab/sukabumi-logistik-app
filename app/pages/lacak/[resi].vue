@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { useShipmentsStore } from '~/stores/shipments'
+import type { Shipment } from '~/types'
 
 const route = useRoute()
 const nav = useAppNav()
-const shipments = useShipmentsStore()
 
-const shipment = shipments.findByResi(String(route.params.resi))
+const resi = computed(() => normalizeResi(String(route.params.resi)))
 
-if (!shipment) {
+const request = useRequestFetch()
+
+const { data: shipment } = await useAsyncData(
+  () => `shipment-${resi.value}`,
+  () => request<Shipment>(`/api/shipments/${resi.value}`)
+)
+
+if (!shipment.value) {
   throw createError({ statusCode: 404, statusMessage: 'Resi tidak ditemukan', fatal: true })
 }
 </script>
@@ -32,7 +38,7 @@ if (!shipment) {
         </button>
         <div class="min-w-0">
           <h1 class="truncate text-lg font-bold text-white">
-            #{{ shipment.resi }}
+            #{{ shipment?.resi }}
           </h1>
           <p class="text-sm text-white/60">
             Detail progress paket
@@ -50,10 +56,10 @@ if (!shipment) {
             Status Saat Ini
           </p>
           <p class="mt-1 text-xl font-bold text-white">
-            {{ shipment.status }}
+            {{ shipment?.status }}
           </p>
           <p class="mt-2 text-sm text-white/70">
-            {{ shipment.eta }}
+            {{ shipment?.eta }}
           </p>
         </div>
       </div>
@@ -63,7 +69,7 @@ if (!shipment) {
         <p class="mb-4 text-xs font-bold uppercase tracking-wider text-gray-400">
           Perjalanan Paket
         </p>
-        <LacakTrackingTimeline :steps="shipment.timeline" />
+        <LacakTrackingTimeline :steps="shipment?.timeline ?? []" />
       </div>
 
       <!-- Route -->
@@ -89,7 +95,7 @@ if (!shipment) {
               Lokasi Penjemputan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ shipment.pickup.city }}, {{ shipment.pickup.area }}
+              {{ shipment?.pickup.city }}, {{ shipment?.pickup.area }}
             </p>
           </div>
           <div class="min-w-0">
@@ -97,7 +103,7 @@ if (!shipment) {
               Lokasi Tujuan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ shipment.delivery.city }}, {{ shipment.delivery.area }}
+              {{ shipment?.delivery.city }}, {{ shipment?.delivery.area }}
             </p>
           </div>
         </div>
@@ -114,7 +120,7 @@ if (!shipment) {
               Berat
             </p>
             <p class="mt-0.5 text-base font-bold text-gray-800">
-              {{ shipment.weight }}
+              {{ shipment?.weight }}
             </p>
           </div>
           <div>
@@ -122,7 +128,7 @@ if (!shipment) {
               Isi Paket
             </p>
             <p class="mt-0.5 text-base font-bold text-gray-800">
-              {{ shipment.content }}
+              {{ shipment?.content }}
             </p>
           </div>
         </div>
@@ -135,11 +141,11 @@ if (!shipment) {
             Kurir
           </p>
           <p class="truncate text-base font-bold text-gray-800">
-            {{ shipment.courier }}
+            {{ shipment?.courier }}
           </p>
         </div>
         <p class="shrink-0 text-xl font-extrabold text-primary">
-          {{ formatRupiah(shipment.price) }}
+          {{ formatRupiah(shipment?.price ?? 0) }}
         </p>
       </div>
 

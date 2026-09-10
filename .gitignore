@@ -23,5 +23,8 @@ logs
 .env.*
 !.env.example
 
+# Prisma generated client
+server/generated
+
 # SDD scratch workspace
 .superpowers

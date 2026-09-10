@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
-
 definePageMeta({ layout: 'auth' })
 
-const auth = useAuthStore()
+const { login } = useAuthActions()
+const toast = useToast()
+
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(false)
+const pending = ref(false)
 
 async function submit() {
-  auth.login(email.value.trim() || 'fulan@email.com')
-  await navigateTo('/')
+  if (pending.value) return
+  pending.value = true
+
+  try {
+    await login(email.value.trim(), password.value)
+    await navigateTo('/')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal masuk',
+      description: (error as Error).message,
+      color: 'error'
+    })
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -78,6 +92,7 @@ async function submit() {
         size="xl"
         block
         class="font-bold"
+        :loading="pending"
       >
         Masuk
       </UButton>

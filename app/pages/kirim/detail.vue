@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { Order } from '~/types'
 import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
 const nav = useAppNav()
+const toast = useToast()
 
-if (!booking.hasCourier) {
+if (!booking.hasCourier || !booking.hasRoute) {
   await navigateTo('/kirim/kurir', { replace: true })
 }
 
@@ -14,6 +16,55 @@ const typeLabel = computed(() => {
   const type = booking.selectedCourier?.type
   return type ? typeLabels[type] : ''
 })
+
+// 1.745 is the flat cashback the prototype advertises; keep it proportional
+// instead so the number stops contradicting the total.
+const cashback = computed(() => Math.round(booking.ongkir * 0.05))
+
+const pending = ref(false)
+
+async function checkout() {
+  if (pending.value) return
+  pending.value = true
+
+  try {
+    const order = await $fetch<Order>('/api/orders', {
+      method: 'POST',
+      body: {
+        sender: booking.sender,
+        receiver: booking.receiver,
+        originId: booking.origin!.id,
+        originLabel: booking.origin!.label,
+        destinationId: booking.destination!.id,
+        destinationLabel: booking.destination!.label,
+        courierId: booking.selectedCourier!.id,
+        weightGram: booking.weightGram,
+        content: booking.content,
+        insured: booking.insurance
+      }
+    })
+
+    await $fetch(`/api/orders/${order.id}/pay`, { method: 'POST' })
+
+    booking.reset()
+    await refreshNuxtData(['orders', 'shipments', 'stats'])
+
+    toast.add({
+      title: 'Pesanan dibuat',
+      description: `Nomor pesanan ${order.orderNo}.`
+    })
+
+    await navigateTo(`/riwayat/${order.id}`)
+  } catch (error) {
+    toast.add({
+      title: 'Gagal membuat pesanan',
+      description: apiMessage(error, 'Coba lagi sebentar.'),
+      color: 'error'
+    })
+  } finally {
+    pending.value = false
+  }
+}
 </script>
 
 <template>
@@ -57,7 +108,7 @@ const typeLabel = computed(() => {
               {{ booking.selectedCourier?.name }}
             </p>
             <p class="text-sm text-gray-500">
-              {{ typeLabel }} • {{ booking.selectedCourier?.eta }}
+              {{ booking.selectedCourier?.serviceName }} • {{ typeLabel }} • {{ booking.selectedCourier?.eta }}
             </p>
           </div>
           <p class="shrink-0 text-xl font-extrabold text-primary">
@@ -254,7 +305,7 @@ const typeLabel = computed(() => {
           class="shrink-0 text-blue-600"
         />
         <p class="text-sm text-blue-800">
-          Cashback yang akan kamu dapat sebesar <span class="font-bold">Rp 1.745</span> setelah kamu selesai melakukan transaksi ini.
+          Cashback yang akan kamu dapat sebesar <span class="font-bold">{{ formatRupiah(cashback) }}</span> setelah kamu selesai melakukan transaksi ini.
         </p>
       </div>
 
@@ -272,13 +323,17 @@ const typeLabel = computed(() => {
     <AppStickyBar>
       <button
         type="button"
-        class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20"
+        class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
+        :disabled="pending"
+        @click="checkout"
       >
         <span
           v-ripple
           class="absolute inset-0 rounded-2xl"
         />
-        <span class="relative z-10 pointer-events-none">Lanjutkan Bayar</span>
+        <span class="relative z-10 pointer-events-none">
+          {{ pending ? 'Memproses...' : 'Lanjutkan Bayar' }}
+        </span>
       </button>
     </AppStickyBar>
   </div>

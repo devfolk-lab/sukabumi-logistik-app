@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useShipmentsStore } from '~/stores/shipments'
 import type { Shipment } from '~/types'
 
 const nav = useAppNav()
-const shipments = useShipmentsStore()
+const { data: shipments, status } = await useActiveShipments()
 
 function progress(shipment: Shipment): number {
   const done = shipment.timeline.filter(s => s.done).length
@@ -47,9 +46,28 @@ function progress(shipment: Shipment): number {
         <h2 class="mb-3 text-base font-bold text-gray-800">
           Paket Sedang Berjalan
         </h2>
-        <div class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5">
+        <div
+          v-if="status === 'pending'"
+          class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
+        >
+          <USkeleton
+            v-for="n in 2"
+            :key="n"
+            class="h-24 rounded-3xl"
+          />
+        </div>
+        <p
+          v-else-if="!shipments.length"
+          class="rounded-3xl bg-white p-6 text-center text-sm text-gray-500 shadow-card lg:shadow-card-flat"
+        >
+          Tidak ada paket yang sedang berjalan.
+        </p>
+        <div
+          v-else
+          class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
+        >
           <NuxtLink
-            v-for="shipment in shipments.active"
+            v-for="shipment in shipments"
             :key="shipment.resi"
             v-ripple.dark
             :to="`/lacak/${shipment.resi}`"

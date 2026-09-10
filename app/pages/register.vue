@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
-
 definePageMeta({ layout: 'auth' })
 
-const auth = useAuthStore()
+const { register } = useAuthActions()
 const toast = useToast()
 
 const nama = ref('')
@@ -13,14 +11,41 @@ const password = ref('')
 const passwordConfirm = ref('')
 const showPassword = ref(false)
 const agree = ref(false)
+const pending = ref(false)
+
+const canSubmit = computed(() =>
+  nama.value.trim() !== ''
+  && email.value.trim() !== ''
+  && password.value.length >= 8
+  && password.value === passwordConfirm.value
+  && agree.value
+)
 
 async function submit() {
-  auth.register(nama.value, email.value.trim() || 'fulan@email.com')
-  toast.add({
-    title: 'Akun berhasil dibuat!',
-    description: `Selamat datang${nama.value.trim() ? `, ${nama.value.trim()}` : ''}.`
-  })
-  await navigateTo('/')
+  if (!canSubmit.value || pending.value) return
+  pending.value = true
+
+  try {
+    await register({
+      nama: nama.value.trim(),
+      email: email.value.trim(),
+      telp: telepon.value.trim(),
+      password: password.value
+    })
+    toast.add({
+      title: 'Akun berhasil dibuat!',
+      description: `Selamat datang, ${nama.value.trim()}.`
+    })
+    await navigateTo('/')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mendaftar',
+      description: (error as Error).message,
+      color: 'error'
+    })
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -112,6 +137,8 @@ async function submit() {
         size="xl"
         block
         class="font-bold"
+        :loading="pending"
+        :disabled="!canSubmit"
       >
         Daftar
       </UButton>

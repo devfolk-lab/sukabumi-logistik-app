@@ -3,6 +3,49 @@ import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
 const nav = useAppNav()
+const toast = useToast()
+
+const { data: profile } = await useProfile()
+const { data: addresses } = await useAddresses()
+
+// Prefill the sender from the saved default address so the common case is one
+// tap. Anything the user already typed wins.
+onMounted(() => {
+  const utama = addresses.value.find(a => a.main)
+
+  if (utama && !booking.sender.nama) {
+    booking.sender = { nama: utama.nama, telp: utama.telp, alamat: utama.alamat }
+  } else if (profile.value && !booking.sender.nama) {
+    booking.sender = { nama: profile.value.nama, telp: profile.value.telp ?? '', alamat: '' }
+  }
+
+  if (utama?.destinationId && !booking.origin) {
+    booking.origin = {
+      id: utama.destinationId,
+      label: utama.destinationLabel ?? '',
+      province: '',
+      city: (utama.destinationLabel ?? '').split(',')[2]?.trim() ?? '',
+      district: '',
+      subdistrict: (utama.destinationLabel ?? '').split(',')[0]?.trim() ?? '',
+      zipCode: utama.zipCode ?? ''
+    }
+  }
+})
+
+const kurang = computed(() => {
+  if (!booking.hasRoute) return 'Pilih lokasi penjemputan dan tujuan dulu.'
+  if (!booking.hasParties) return 'Lengkapi detail pengirim dan penerima dulu.'
+  if (booking.weight <= 0) return 'Isi berat paket dulu.'
+  return ''
+})
+
+async function next() {
+  if (kurang.value) {
+    toast.add({ title: 'Data belum lengkap', description: kurang.value, color: 'warning' })
+    return
+  }
+  await navigateTo('/kirim/kurir')
+}
 </script>
 
 <template>
@@ -53,7 +96,7 @@ const nav = useAppNav()
       <button
         type="button"
         class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20"
-        @click="navigateTo('/kirim/kurir')"
+        @click="next"
       >
         <span
           v-ripple

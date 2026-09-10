@@ -1,15 +1,4 @@
 <script setup lang="ts">
-import { useCouriersStore } from '~/stores/couriers'
-import { useBookingStore } from '~/stores/booking'
-import type { PartnerBadge } from '~/types'
-
-const couriers = useCouriersStore()
-const booking = useBookingStore()
-
-async function open(partner: PartnerBadge) {
-  if (partner.courierId) booking.selectCourier(partner.courierId)
-  await navigateTo('/kirim')
-}
 </script>
 
 <template>
@@ -19,12 +8,11 @@ async function open(partner: PartnerBadge) {
     </h2>
     <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
       <div class="grid grid-cols-5 gap-x-2 gap-y-5 lg:grid-cols-10">
-        <button
-          v-for="partner in couriers.partners"
+        <NuxtLink
+          v-for="partner in PARTNER_BADGES"
           :key="partner.label"
-          type="button"
+          to="/kirim"
           class="flex cursor-pointer flex-col items-center gap-1.5"
-          @click="open(partner)"
         >
           <span
             v-ripple
@@ -44,7 +32,7 @@ async function open(partner: PartnerBadge) {
             />
           </span>
           <span class="text-sm font-semibold text-gray-500">{{ partner.label }}</span>
-        </button>
+        </NuxtLink>
       </div>
     </div>
   </div>

@@ -1,14 +1,57 @@
 <script setup lang="ts">
-import { useAddressesStore } from '~/stores/addresses'
-import type { Address } from '~/types'
+import type { AddressFormPayload } from '~/components/alamat/AddressForm.vue'
 
 const nav = useAppNav()
-const addresses = useAddressesStore()
-const showForm = ref(false)
+const toast = useToast()
 
-function addAddress(payload: Omit<Address, 'id' | 'main'>) {
-  addresses.add(payload)
-  showForm.value = false
+const { data: addresses, status, refresh } = await useAddresses()
+
+const showForm = ref(false)
+const saving = ref(false)
+
+async function addAddress(payload: AddressFormPayload) {
+  saving.value = true
+
+  try {
+    await $fetch('/api/addresses', { method: 'POST', body: payload })
+    await refresh()
+    showForm.value = false
+    toast.add({ title: 'Alamat tersimpan' })
+  } catch (error) {
+    toast.add({
+      title: 'Gagal menyimpan alamat',
+      description: apiMessage(error, 'Coba lagi sebentar.'),
+      color: 'error'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeAddress(id: string) {
+  try {
+    await $fetch(`/api/addresses/${id}`, { method: 'DELETE' })
+    await refresh()
+  } catch (error) {
+    toast.add({
+      title: 'Gagal menghapus alamat',
+      description: apiMessage(error, 'Coba lagi sebentar.'),
+      color: 'error'
+    })
+  }
+}
+
+async function setMain(id: string) {
+  try {
+    await $fetch(`/api/addresses/${id}`, { method: 'PATCH', body: { main: true } })
+    await refresh()
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mengubah alamat utama',
+      description: apiMessage(error, 'Coba lagi sebentar.'),
+      color: 'error'
+    })
+  }
 }
 </script>
 
@@ -42,14 +85,34 @@ function addAddress(payload: Omit<Address, 'id' | 'main'>) {
     </AppPageHero>
 
     <AppPageContent class="mt-5 space-y-4 pb-10">
-      <div class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5">
-        <AlamatAddressCard
-          v-for="address in addresses.list"
-          :key="address.id"
-          :address="address"
-          @remove="addresses.remove"
+      <div
+        v-if="status === 'pending'"
+        class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
+      >
+        <USkeleton
+          v-for="n in 2"
+          :key="n"
+          class="h-36 rounded-3xl"
         />
       </div>
+      <div
+        v-else-if="addresses.length"
+        class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
+      >
+        <AlamatAddressCard
+          v-for="address in addresses"
+          :key="address.id"
+          :address="address"
+          @remove="removeAddress"
+          @set-main="setMain"
+        />
+      </div>
+      <p
+        v-else-if="!showForm"
+        class="rounded-3xl bg-white p-6 text-center text-sm text-gray-500 shadow-card lg:shadow-card-flat"
+      >
+        Belum ada alamat tersimpan.
+      </p>
 
       <button
         v-if="!showForm"
@@ -67,6 +130,7 @@ function addAddress(payload: Omit<Address, 'id' | 'main'>) {
 
       <AlamatAddressForm
         v-if="showForm"
+        :pending="saving"
         @submit="addAddress"
         @cancel="showForm = false"
       />
