@@ -14,8 +14,12 @@ pnpm preview      # preview the production build locally
 pnpm lint         # eslint . — CI gate
 pnpm typecheck    # nuxt typecheck (vue-tsc) — CI gate
 pnpm db:migrate   # prisma migrate dev
+pnpm db:seed      # prisma db seed — demo logins + demo data
+pnpm db:reset     # DESTRUCTIVE: migrate reset + db push + seed, in that order
 pnpm db:studio    # prisma studio
 ```
+
+`db:reset` drops and rebuilds the `public` schema, so it is dev-only. Prisma 7 removed both `migrate reset --skip-seed` and reset's implicit seeding, so the three steps each run exactly once. `auth` is a separate schema and survives the reset; the seeder finds the existing `auth.users` rows by email and reuses their ids, which is what keeps `Profile.id` mirroring them.
 
 `pnpm lint -- --fix` applies autofixes. There is no test runner configured; CI (`.github/workflows/ci.yml`, Node 22) runs only lint + typecheck, so both must pass before a change is done.
 
@@ -46,6 +50,8 @@ Nuxt 4 SSR app in three layers: `app/` (UI), `server/` (Nitro API and integratio
 ### Data
 
 `prisma/schema.prisma` owns the `public` schema; Supabase Auth owns `auth`, and Prisma never touches it. `Profile.id` mirrors `auth.users.id` and is upserted on the first authenticated request. Datasource URLs live in `prisma.config.ts`, not in the schema (Prisma 7 removed `directUrl`); migrations run against the session pooler (5432) because the transaction pooler (6543) cannot hold Prisma Migrate's advisory locks.
+
+`prisma/seed.ts` (run by `pnpm db:seed`, wired through `prisma.config.ts` `migrations.seed`, run by `tsx` because the generated client's `.js` specifiers only exist as `.ts`) is the **one** exception to "Prisma never touches `auth`": it writes `auth.users` and `auth.identities` directly, since signup obeys the project's email-confirmation and rate-limit settings and there is no service-role key in `.env`. Two details are load-bearing — passwords must be hashed with pgcrypto's `crypt(..., gen_salt('bf', 10))`, whose schema is resolved at runtime (`extensions` on Supabase), and `confirmation_token` / `recovery_token` / `email_change_token_new` / `email_change` must be `''` rather than NULL or every sign-in fails with "Database error querying schema". The seeder ends by actually signing in against GoTrue, so a broken row fails the run instead of the login page. It only ever deletes rows belonging to the accounts in `prisma/seed/fixtures.ts`.
 
 ### Styling
 

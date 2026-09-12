@@ -6,7 +6,11 @@ import { defineConfig, env } from 'prisma/config'
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
-    path: 'prisma/migrations'
+    path: 'prisma/migrations',
+    // tsx rather than bare `node`: the generated Prisma client imports its own
+    // modules with `.js` specifiers that only exist as `.ts`, which Node's
+    // built-in type stripping does not resolve.
+    seed: 'tsx prisma/seed.ts'
   },
   datasource: {
     url: env('DIRECT_URL')

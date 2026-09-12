@@ -32,6 +32,44 @@ Run the dev server at `http://localhost:3000`:
 pnpm dev
 ```
 
+### Seed a login
+
+Every route is user-scoped, so an empty database has nothing to show. The seeder
+creates confirmed Supabase Auth users and fills them with demo alamat, pesanan
+and tracking events:
+
+```bash
+pnpm db:seed
+```
+
+| Email | Password |
+| --- | --- |
+| `demo@sukabumilogistik.id` | `Demo1234!` |
+| `siti@sukabumilogistik.id` | `Siti1234!` |
+
+Sign in at `/login`. `demo@` carries eight orders covering all six
+`OrderStatus` stages; `siti@` carries two, so per-user scoping is visible.
+
+To seed an address you actually own instead of the first demo account:
+
+```bash
+SEED_EMAIL=you@example.com SEED_PASSWORD='Your1234!' pnpm db:seed
+```
+
+Re-running is safe. Each seeded account's addresses and orders are dropped and
+recreated (no other account is touched), and the password is reset to the one
+above, so the seeder doubles as a "I forgot the demo password" reset.
+
+To rebuild the schema from scratch and reseed in one go:
+
+```bash
+pnpm db:reset   # prisma migrate reset && prisma db push && prisma db seed
+```
+
+This one is **destructive and dev-only**: it drops the `public` schema, replays
+every migration, then reseeds. Supabase's `auth` schema lives outside `public`
+and survives, so the seeded logins keep their user ids.
+
 Build for production:
 
 ```bash

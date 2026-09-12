@@ -12,6 +12,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force && prisma db push --accept-data-loss && prisma db seed",
     "db:studio": "prisma studio"
   },
   "dependencies": {
@@ -35,6 +37,7 @@
     "@nuxt/eslint": "^1.17.0",
     "dotenv": "^17.4.2",
     "eslint": "^10.10.0",
+    "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.3.11"
   },
