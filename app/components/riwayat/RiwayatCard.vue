@@ -20,15 +20,21 @@ const deliveryCity = computed(() => props.order.delivery.split(',')[0])
     :to="`/riwayat/${order.id}`"
     class="flex items-center gap-3 rounded-3xl bg-white p-4 shadow-card lg:shadow-card-flat"
   >
-    <div
-      class="flex size-12 shrink-0 items-center justify-center rounded-2xl"
-      :class="meta.bg"
-    >
-      <UIcon
-        :name="meta.icon"
-        class="size-5"
-        :class="meta.text"
+    <div class="relative shrink-0">
+      <AppCourierLogo
+        :code="order.courierCode"
+        class="size-12 rounded-2xl text-sm"
       />
+      <span
+        class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center rounded-full ring-2 ring-white"
+        :class="meta.bg"
+      >
+        <UIcon
+          :name="meta.icon"
+          class="size-3"
+          :class="meta.text"
+        />
+      </span>
     </div>
     <div class="min-w-0 flex-1">
       <div class="flex items-center justify-between gap-2">

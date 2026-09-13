@@ -5,6 +5,10 @@ export interface CourierBrand {
   to: string
   initials?: string
   icon?: string
+  /** Public path of the carrier logo, when one is bundled. */
+  logo?: string
+  /** The logo is white-on-transparent and must sit on the brand gradient. */
+  logoOnBrand?: boolean
 }
 
 /** A live RajaOngkir rate with local brand metadata merged in. */
@@ -26,11 +30,7 @@ export interface Courier {
 
 export interface PartnerBadge {
   label: string
-  color: string
-  initials?: string
-  icon?: string
-  textClass: string
-  courierCode?: string
+  courierCode: string
 }
 
 /** A RajaOngkir V2 subdistrict, the unit both origin and destination use. */
@@ -71,6 +71,7 @@ export interface Order {
   pickup: string
   delivery: string
   courier: string
+  courierCode: string
   price: number
   weight: string
   content: string
@@ -89,6 +90,7 @@ export interface Shipment {
   resi: string
   orderId: string
   courier: string
+  courierCode: string
   price: number
   weight: string
   content: string

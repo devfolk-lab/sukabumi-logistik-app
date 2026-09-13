@@ -18,12 +18,12 @@ const typeLabel = computed(() => {
   >
     <div class="flex items-center justify-between">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary">
-          <UIcon
-            name="i-lucide-check"
-            class="size-4 text-white"
-          />
-        </div>
+        <AppCourierLogo
+          v-if="booking.selectedCourier"
+          :code="booking.selectedCourier.code"
+          :brand="booking.selectedCourier.brand"
+          class="size-10 rounded-xl text-xs"
+        />
         <div class="min-w-0">
           <p class="truncate text-base font-bold text-primary">
             {{ booking.selectedCourier?.name }}

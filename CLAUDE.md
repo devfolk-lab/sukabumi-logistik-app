@@ -36,7 +36,7 @@ Nuxt 4 SSR app in three layers: `app/` (UI), `server/` (Nitro API and integratio
 - `app/components/` — auto-imported by filename (no explicit imports needed).
 - `app/app.config.ts` — Nuxt UI runtime theme (`ui.colors.primary` / `neutral`). Change semantic colors here, not in CSS.
 - `app/assets/css/main.css` — the only global stylesheet, registered via `nuxt.config.ts` `css:`.
-- `app/composables/useApi.ts` — every server-state read. These wrap `useAsyncData` with fixed keys so components share one request, and they use `useRequestFetch()` rather than bare `$fetch`: during SSR a bare `$fetch` sends no cookies and every authenticated route answers 401.
+- `app/composables/useApi.ts` — every server-state read. These wrap `useAsyncData` with fixed keys so components share one request. Pages do **not** `await` them: the app is client-rendered, so each page reads `status` and shows `USkeleton`s while it is `'idle'` / `'pending'`, and lookups that miss render `AppNotFound` in-page rather than `throw createError`.
 - `app/stores/booking.ts` — the only Pinia store. It holds the kirim wizard draft, which spans three routes. Do not add stores for server state.
 
 ### Server
@@ -44,6 +44,7 @@ Nuxt 4 SSR app in three layers: `app/` (UI), `server/` (Nitro API and integratio
 - `server/utils/prisma.ts` — the Prisma singleton. Supabase's Postgres certificate is signed by a private CA (pinned in `server/utils/supabase-ca.ts`), and node-postgres lets a connection-string `sslmode` override an explicit `ssl` object, so the URL's `sslmode` is stripped before the adapter sees it.
 - `server/utils/auth.ts` — `requireProfile(event)` guards every user-scoped route. `serverSupabaseUser()` returns decoded JWT *claims*, not a `User`: the id is `sub`, and claims carry an index signature, so `.id` typechecks and is silently undefined.
 - `server/utils/rajaongkir.ts` — RajaOngkir API V2. The product is called V2 but the path is `/api/v1`; there is no `/api/v2`. Errors arrive in the response envelope as well as in the status code.
+- `server/utils/destinations.ts` — local destination index. RajaOngkir's hosted search only matches whole words (`cibad` → nothing, `cibadak` → results), so `/api/destinations` searches `server/assets/destinations.tsv.gz` — built by `pnpm build:destinations` (`scripts/build-destinations.ts`, ~7,500 paced requests, resumable via `scripts/.cache/`) — and only falls back to the hosted search when the snapshot is missing.
 - `server/utils/komship.ts` — the carrier handoff. Komship's carrier catalog and tariffs are **separate** from the RajaOngkir cost API's, so a quoted service must be re-resolved via `resolveKomshipService()` or the store call fails with "expedition not found".
 - `server/utils/mappers.ts` — Prisma rows to the domain types in `shared/types`.
 
@@ -61,13 +62,15 @@ Prefer Nuxt UI components (`U*`) and Tailwind utility classes over hand-written 
 
 Icons come from Iconify collections installed as deps: `i-lucide-*` and `i-simple-icons-*`. Using an icon from another collection requires adding its `@iconify-json/*` package.
 
-Carriers have no brand metadata in the RajaOngkir response, so `shared/utils/courier.ts` supplies colors, initials and vehicle icons keyed by courier code. Add new carriers there.
+Carriers have no brand metadata in the RajaOngkir response, so `shared/utils/courier.ts` supplies colors, initials, logos and vehicle icons keyed by courier code, rendered everywhere through `AppCourierLogo`. Logos live in `public/img/couriers/` (pulled from each carrier's own site); a carrier without one falls back to initials on its gradient, and `logoOnBrand` marks white logos that need the gradient behind them. Add new carriers there.
+
+Every clickable surface carries `v-ripple` (light ink) or `v-ripple.dark`; pass `v-ripple="{ dark }"` when the surface flips between light and dark. Interactive elements get a base transition from `main.css`, so hover utilities never snap.
 
 ### Modules
 
 `@nuxt/eslint`, `@nuxt/ui`, `@vueuse/nuxt` (VueUse composables auto-imported), `@vite-pwa/nuxt` (PWA; currently no `pwa` options block in `nuxt.config.ts`), `@pinia/nuxt`, `@nuxtjs/supabase`.
 
-Every route is user-scoped, so nothing is prerendered — `routeRules` sets `ssr: true` throughout. `@nuxtjs/supabase` `redirectOptions` sends unauthenticated users to `/login`; the auth pages are in its `exclude` list.
+The app is client-rendered (`ssr: false`): every route is user-scoped and there is nothing to index. `app/spa-loading-template.html` is the branded splash the server ships before hydration, and `<NuxtLoadingIndicator>` in `app.vue` covers route changes. `@nuxtjs/supabase` `redirectOptions` sends unauthenticated users to `/login`; the auth pages are in its `exclude` list.
 
 Secrets reach the server through `runtimeConfig`, so `NUXT_RAJAONGKIR_SHIPPING_COST_API_KEY` maps to `rajaongkir.shippingCostApiKey`, and so on. See `.env.example`.
 

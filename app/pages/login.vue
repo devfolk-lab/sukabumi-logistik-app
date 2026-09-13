@@ -16,6 +16,12 @@ async function submit() {
 
   try {
     await login(email.value.trim(), password.value)
+    toast.add({
+      title: 'Berhasil masuk',
+      description: 'Selamat datang kembali di Sukabumi Logistik.',
+      color: 'success',
+      icon: 'i-lucide-circle-check'
+    })
     await navigateTo('/')
   } catch (error) {
     toast.add({
@@ -88,6 +94,7 @@ async function submit() {
       </div>
 
       <UButton
+        v-ripple
         type="submit"
         size="xl"
         block

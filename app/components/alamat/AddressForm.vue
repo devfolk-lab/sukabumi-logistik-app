@@ -139,7 +139,6 @@ function submit() {
         @click="submit"
       >
         <span
-          v-if="canSubmit"
           v-ripple
           class="absolute inset-0 rounded-2xl"
         />

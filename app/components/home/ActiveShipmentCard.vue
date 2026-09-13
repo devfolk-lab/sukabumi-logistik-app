@@ -12,12 +12,10 @@ const progress = computed(() => {
 
 <template>
   <div class="flex items-center gap-4 rounded-3xl bg-white p-4 shadow-card lg:shadow-card-flat">
-    <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-50">
-      <UIcon
-        name="i-lucide-package"
-        class="size-6 text-primary"
-      />
-    </div>
+    <AppCourierLogo
+      :code="shipment.courierCode"
+      class="size-14 rounded-2xl text-sm"
+    />
     <div class="min-w-0 flex-1">
       <div class="flex items-start justify-between gap-2">
         <h4 class="truncate text-base font-bold text-gray-800">

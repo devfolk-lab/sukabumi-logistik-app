@@ -1,4 +1,7 @@
+import type { DirectiveBinding } from 'vue'
 import { rippleGeometry } from '~/utils/ripple'
+
+type RippleElement = HTMLElement & { __rippleDark?: boolean }
 
 function spawn(el: HTMLElement, event: PointerEvent, dark: boolean): void {
   const { size, left, top } = rippleGeometry(el.getBoundingClientRect(), event.clientX, event.clientY)
@@ -29,14 +32,31 @@ function spawn(el: HTMLElement, event: PointerEvent, dark: boolean): void {
   el.addEventListener('pointerleave', release)
 }
 
+/**
+ * `v-ripple` / `v-ripple.dark` pick the ink colour statically; `v-ripple="{
+ * dark }"` picks it reactively for surfaces that flip between light and dark
+ * (segmented tabs, selected cards).
+ */
+function isDark(binding: DirectiveBinding): boolean {
+  const value = binding.value as { dark?: boolean } | boolean | undefined
+  if (typeof value === 'boolean') return value
+  if (value && typeof value === 'object') return Boolean(value.dark)
+  return Boolean(binding.modifiers.dark)
+}
+
 export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.vueApp.directive('ripple', {
-    mounted(el: HTMLElement, binding) {
+    mounted(el: RippleElement, binding) {
+      el.__rippleDark = isDark(binding)
       el.style.position = 'relative'
       el.style.overflow = 'hidden'
       el.addEventListener('pointerdown', (event: PointerEvent) => {
-        spawn(el, event, Boolean(binding.modifiers.dark))
+        if ((el as HTMLButtonElement).disabled) return
+        spawn(el, event, Boolean(el.__rippleDark))
       })
+    },
+    updated(el: RippleElement, binding) {
+      el.__rippleDark = isDark(binding)
     }
   })
 })

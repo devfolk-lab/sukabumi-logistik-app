@@ -9,24 +9,19 @@ const booking = useBookingStore()
     <!-- Route -->
     <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
       <div class="grid grid-cols-[28px_1fr] gap-x-3">
-        <!-- Marker spine: spans both rows so the dashed line always stretches
-             exactly from the pickup dot to the delivery pin. -->
-        <div class="row-span-2 flex flex-col items-center">
+        <!-- Marker spine, one cell per row: the dot sits beside the pickup
+             label with the dashed line filling the rest of that row, so the
+             pin lands exactly beside the "Lokasi Tujuan" label. -->
+        <div class="flex flex-col items-center">
           <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100">
             <div class="size-2.5 rounded-full bg-emerald-500" />
           </div>
           <div class="route-dash my-1.5 w-0.5 flex-1" />
-          <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-50">
-            <UIcon
-              name="i-lucide-map-pin"
-              class="size-4 text-primary"
-            />
-          </div>
         </div>
 
         <!-- Pickup -->
         <div class="min-w-0 pb-4">
-          <label class="text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Penjemputan</label>
+          <label class="flex h-7 items-center text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Penjemputan</label>
           <AppDestinationSelect
             v-model="booking.origin"
             class="mt-1.5"
@@ -45,9 +40,18 @@ const booking = useBookingStore()
           </div>
         </div>
 
+        <div class="flex flex-col items-center">
+          <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-50">
+            <UIcon
+              name="i-lucide-map-pin"
+              class="size-4 text-primary"
+            />
+          </div>
+        </div>
+
         <!-- Delivery -->
         <div class="min-w-0">
-          <label class="text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Tujuan</label>
+          <label class="flex h-7 items-center text-sm font-bold uppercase tracking-wider text-gray-400">Lokasi Tujuan</label>
           <AppDestinationSelect
             v-model="booking.destination"
             class="mt-1.5"

@@ -4,7 +4,7 @@ import type { CourierType } from '~/types'
 const model = defineModel<CourierType | 'all'>({ required: true })
 
 const items = [
-  { label: 'Semua', value: 'all' },
+  { label: 'Semua', value: 'all', icon: 'i-lucide-layers' },
   { label: 'Instan', value: 'instant', icon: 'i-lucide-zap' },
   { label: 'Same Day', value: 'sameday', icon: 'i-lucide-clock' },
   { label: 'Reguler', value: 'regular', icon: 'i-lucide-truck' }
@@ -12,12 +12,8 @@ const items = [
 </script>
 
 <template>
-  <UTabs
+  <AppSegmentedTabs
     v-model="model"
     :items="items"
-    variant="pill"
-    :content="false"
-    class="w-full"
-    :ui="{ list: 'overflow-x-auto hide-scrollbar' }"
   />
 </template>

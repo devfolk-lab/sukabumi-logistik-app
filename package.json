@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force && prisma db push --accept-data-loss && prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "build:destinations": "tsx scripts/build-destinations.ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.129",

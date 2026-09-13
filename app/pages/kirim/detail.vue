@@ -25,6 +25,16 @@ const pending = ref(false)
 
 async function checkout() {
   if (pending.value) return
+
+  if (!booking.hasParties) {
+    toast.add({
+      title: 'Data belum lengkap',
+      description: 'Lengkapi nama, nomor telepon, dan alamat pengirim serta penerima dulu.',
+      color: 'warning'
+    })
+    return
+  }
+
   pending.value = true
 
   try {
@@ -73,7 +83,7 @@ async function checkout() {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/kirim/kurir')"
         >
           <span
@@ -103,7 +113,13 @@ async function checkout() {
           Kurir Pilihan Kamu
         </p>
         <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
+          <AppCourierLogo
+            v-if="booking.selectedCourier"
+            :code="booking.selectedCourier.code"
+            :brand="booking.selectedCourier.brand"
+            class="size-12 rounded-xl text-sm"
+          />
+          <div class="min-w-0 flex-1">
             <p class="truncate text-base font-bold text-gray-800">
               {{ booking.selectedCourier?.name }}
             </p>
@@ -154,87 +170,21 @@ async function checkout() {
         </dl>
       </div>
 
-      <!-- Data Pengirim + Data Penerima -->
+      <!-- Detail Pengirim + Detail Penerima: the last thing to fill in, once
+           the price is known. -->
       <div class="grid gap-5 lg:grid-cols-2">
-        <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
-          <div class="mb-4 flex items-center gap-2">
-            <div class="flex size-8 items-center justify-center rounded-xl bg-emerald-50">
-              <UIcon
-                name="i-lucide-user"
-                class="size-4 text-emerald-600"
-              />
-            </div>
-            <h3 class="text-base font-bold text-gray-800">
-              Data Pengirim
-            </h3>
-          </div>
-          <dl class="space-y-2.5">
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Nama
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.sender.nama || '-' }}
-              </dd>
-            </div>
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Telepon
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.sender.telp || '-' }}
-              </dd>
-            </div>
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Alamat
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.sender.alamat || '-' }}
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
-          <div class="mb-4 flex items-center gap-2">
-            <div class="flex size-8 items-center justify-center rounded-xl bg-amber-50">
-              <UIcon
-                name="i-lucide-user"
-                class="size-4 text-amber-600"
-              />
-            </div>
-            <h3 class="text-base font-bold text-gray-800">
-              Data Penerima
-            </h3>
-          </div>
-          <dl class="space-y-2.5">
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Nama
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.receiver.nama || '-' }}
-              </dd>
-            </div>
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Telepon
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.receiver.telp || '-' }}
-              </dd>
-            </div>
-            <div class="flex justify-between gap-3">
-              <dt class="shrink-0 text-sm text-gray-500">
-                Alamat
-              </dt>
-              <dd class="truncate text-sm font-bold text-gray-800">
-                {{ booking.receiver.alamat || '-' }}
-              </dd>
-            </div>
-          </dl>
-        </div>
+        <KirimPartyDetailsSection
+          v-model="booking.sender"
+          title="Detail Pengirim"
+          icon="i-lucide-user"
+          default-open
+        />
+        <KirimPartyDetailsSection
+          v-model="booking.receiver"
+          title="Detail Penerima"
+          icon="i-lucide-user-check"
+          default-open
+        />
       </div>
 
       <!-- Asuransi Pengiriman -->

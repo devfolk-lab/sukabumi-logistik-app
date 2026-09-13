@@ -8,14 +8,12 @@ const resi = computed(() => normalizeResi(String(route.params.resi)))
 
 const request = useRequestFetch()
 
-const { data: shipment } = await useAsyncData(
+const { data: shipment, status, error, refresh } = useAsyncData(
   () => `shipment-${resi.value}`,
   () => request<Shipment>(`/api/shipments/${resi.value}`)
 )
 
-if (!shipment.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Resi tidak ditemukan', fatal: true })
-}
+const loading = computed(() => status.value === 'pending' || status.value === 'idle')
 </script>
 
 <template>
@@ -24,7 +22,7 @@ if (!shipment.value) {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/lacak')"
         >
           <span
@@ -38,7 +36,7 @@ if (!shipment.value) {
         </button>
         <div class="min-w-0">
           <h1 class="truncate text-lg font-bold text-white">
-            #{{ shipment?.resi }}
+            #{{ shipment?.resi ?? resi }}
           </h1>
           <p class="text-sm text-white/60">
             Detail progress paket
@@ -47,7 +45,32 @@ if (!shipment.value) {
       </div>
     </AppPageHero>
 
-    <AppPageContent class="mt-5 space-y-5 pb-10">
+    <AppPageContent
+      v-if="loading"
+      class="mt-5 space-y-5 pb-10"
+    >
+      <USkeleton class="h-28 rounded-3xl" />
+      <USkeleton class="h-64 rounded-3xl" />
+      <USkeleton class="h-36 rounded-3xl" />
+    </AppPageContent>
+
+    <AppPageContent
+      v-else-if="error || !shipment"
+      class="mt-5 pb-10"
+    >
+      <AppNotFound
+        title="Resi tidak ditemukan"
+        :description="apiMessage(error, 'Periksa lagi nomor resinya, atau cari dari daftar paket yang sedang berjalan.')"
+        back-label="Kembali ke Lacak Pengiriman"
+        back-to="/lacak"
+        :retry="refresh"
+      />
+    </AppPageContent>
+
+    <AppPageContent
+      v-else
+      class="mt-5 space-y-5 pb-10"
+    >
       <!-- Current status hero -->
       <div class="relative overflow-hidden rounded-3xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-5 shadow-lg shadow-primary/20">
         <div class="absolute top-0 right-0 size-32 -translate-y-1/3 translate-x-1/4 rounded-full bg-white/5" />
@@ -136,7 +159,11 @@ if (!shipment.value) {
 
       <!-- Courier + price -->
       <div class="flex items-center justify-between gap-3 rounded-3xl bg-white p-4 shadow-card lg:shadow-card-flat">
-        <div class="min-w-0">
+        <AppCourierLogo
+          :code="shipment.courierCode"
+          class="size-12 rounded-xl text-sm"
+        />
+        <div class="min-w-0 flex-1">
           <p class="text-xs font-semibold text-gray-400 uppercase">
             Kurir
           </p>
@@ -152,7 +179,7 @@ if (!shipment.value) {
       <button
         v-ripple.dark
         type="button"
-        class="w-full rounded-2xl border-2 border-gray-200 bg-white py-3.5 text-base font-bold text-gray-700"
+        class="w-full rounded-2xl border-2 border-gray-200 bg-white py-3.5 text-base font-bold text-gray-700 hover:border-gray-300 hover:bg-gray-50"
         @click="navigateTo('/lacak')"
       >
         Kembali ke Lacak Pengiriman

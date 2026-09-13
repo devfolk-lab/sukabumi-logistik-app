@@ -4,7 +4,7 @@ import type { AddressFormPayload } from '~/components/alamat/AddressForm.vue'
 const nav = useAppNav()
 const toast = useToast()
 
-const { data: addresses, status, refresh } = await useAddresses()
+const { data: addresses, status, refresh } = useAddresses()
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -61,7 +61,7 @@ async function setMain(id: string) {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/')"
         >
           <span
@@ -86,7 +86,7 @@ async function setMain(id: string) {
 
     <AppPageContent class="mt-5 space-y-4 pb-10">
       <div
-        v-if="status === 'pending'"
+        v-if="status === 'pending' || status === 'idle'"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton

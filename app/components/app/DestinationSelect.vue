@@ -8,7 +8,14 @@ defineProps<{
 
 const model = defineModel<Destination | undefined>({ default: undefined })
 
-const { term, results, loading } = useDestinationSearch()
+const { term, results, loading, error } = useDestinationSearch()
+
+const emptyText = computed(() => {
+  if (error.value) return error.value
+  if (term.value.trim().length < 2) return 'Ketik minimal 2 huruf'
+  if (loading.value) return 'Mencari lokasi...'
+  return 'Lokasi tidak ditemukan'
+})
 </script>
 
 <template>
@@ -26,9 +33,16 @@ const { term, results, loading } = useDestinationSearch()
     :ignore-filter="true"
     :ui="{ content: 'max-h-72' }"
   >
+    <template #item-label="{ item }">
+      <span class="block truncate font-semibold text-gray-800">{{ item.subdistrict }}</span>
+      <span class="block truncate text-xs text-gray-500">{{ item.district }}, {{ item.city }}, {{ item.province }} {{ item.zipCode }}</span>
+    </template>
     <template #empty>
-      <span class="text-sm text-gray-500">
-        {{ term.trim().length < 3 ? 'Ketik minimal 3 huruf' : 'Lokasi tidak ditemukan' }}
+      <span
+        class="text-sm"
+        :class="error ? 'font-semibold text-red-500' : 'text-gray-500'"
+      >
+        {{ emptyText }}
       </span>
     </template>
   </UInputMenu>

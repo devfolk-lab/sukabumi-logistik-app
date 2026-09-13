@@ -28,3 +28,4 @@ server/generated
 
 # SDD scratch workspace
 .superpowers
+scripts/.cache

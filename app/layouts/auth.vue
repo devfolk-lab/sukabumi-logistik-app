@@ -7,7 +7,7 @@
         variant="mark"
         class="relative z-10"
       />
-      <div class="relative z-10">
+      <div class="relative z-10 mx-auto max-w-sm text-center">
         <p class="text-3xl font-extrabold leading-tight text-white">
           Semua kebutuhan pengiriman, dalam satu pintu.
         </p>

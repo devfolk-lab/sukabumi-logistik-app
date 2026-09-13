@@ -133,6 +133,7 @@ async function submit() {
       />
 
       <UButton
+        v-ripple
         type="submit"
         size="xl"
         block

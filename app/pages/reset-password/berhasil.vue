@@ -18,6 +18,7 @@ definePageMeta({ layout: 'auth' })
     </p>
 
     <UButton
+      v-ripple
       to="/login"
       size="xl"
       block

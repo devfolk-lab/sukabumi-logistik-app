@@ -56,6 +56,7 @@ function resendEmail() {
         Karena ini prototipe, gunakan tombol di bawah untuk mensimulasikan link magic yang seharusnya kamu buka dari email.
       </p>
       <UButton
+        v-ripple
         to="/reset-password"
         size="xl"
         block

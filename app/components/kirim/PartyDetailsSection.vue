@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import type { Party } from '~/types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   icon: string
   modelValue: Party
-}>()
+  defaultOpen?: boolean
+}>(), { defaultOpen: false })
 
 const emit = defineEmits<{
   'update:modelValue': [value: Party]
 }>()
 
-const open = ref(false)
+const open = ref(props.defaultOpen)
 
 function update(field: keyof Party, value: string | number): void {
   emit('update:modelValue', { ...props.modelValue, [field]: String(value) })
@@ -21,11 +22,12 @@ function update(field: keyof Party, value: string | number): void {
 <template>
   <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
     <button
+      v-ripple.dark
       type="button"
-      class="flex w-full items-center justify-between gap-2"
+      class="-m-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-2xl p-2"
       @click="open = !open"
     >
-      <div class="flex items-center gap-2">
+      <div class="pointer-events-none flex items-center gap-2">
         <div class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary-50">
           <UIcon
             :name="icon"
@@ -36,7 +38,7 @@ function update(field: keyof Party, value: string | number): void {
       </div>
       <UIcon
         name="i-lucide-chevron-down"
-        class="size-5 shrink-0 text-gray-400 transition-transform duration-200"
+        class="pointer-events-none size-5 shrink-0 text-gray-400 transition-transform duration-200"
         :class="open ? 'rotate-180' : ''"
       />
     </button>

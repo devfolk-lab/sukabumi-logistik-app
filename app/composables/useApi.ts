@@ -3,9 +3,12 @@ import type { Address, Order, OrderStats, Shipment, User } from '~/types'
 // Fixed keys so every component that calls one of these shares a single
 // request and a single cache entry.
 //
-// `useRequestFetch()` rather than plain `$fetch`: during SSR these run inside
-// Nitro, where a bare `$fetch` sends no cookies and every authenticated route
-// answers 401. It forwards the incoming request's headers instead.
+// The app renders client-side only, so callers must not `await` these in
+// setup — read `status` and show a skeleton while it is 'idle' or 'pending'.
+//
+// `useRequestFetch()` rather than plain `$fetch` is kept so the composables
+// stay correct if a route is ever server-rendered again: inside Nitro a bare
+// `$fetch` sends no cookies and every authenticated route answers 401.
 
 export function useProfile() {
   const request = useRequestFetch()

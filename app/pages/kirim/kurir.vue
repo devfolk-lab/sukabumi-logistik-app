@@ -13,7 +13,7 @@ const filter = ref<CourierType | 'all'>('all')
 
 const request = useRequestFetch()
 
-const { data: rates, status, error } = await useAsyncData(
+const { data: rates, status, error } = useAsyncData(
   'rates',
   () => request<Courier[]>('/api/couriers/rates', {
     method: 'POST',
@@ -46,7 +46,7 @@ function select(courier: Courier) {
         <div class="mb-1 flex items-center gap-4">
           <button
             type="button"
-            class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+            class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
             @click="nav.back('/kirim')"
           >
             <span
@@ -84,7 +84,7 @@ function select(courier: Courier) {
 
     <AppPageContent class="pb-40">
       <div
-        v-if="status === 'pending'"
+        v-if="status === 'pending' || status === 'idle'"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton

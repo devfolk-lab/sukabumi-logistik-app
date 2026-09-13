@@ -83,9 +83,13 @@ function unwrap<T>(res: Envelope<T>, fallback: string): T {
 }
 
 export async function searchDestinations(search: string, limit = 20, offset = 0): Promise<Destination[]> {
-  const res = await client()<Envelope<RawDestination[]>>('/destination/domestic-destination', {
+  const res = await client()<Envelope<RawDestination[] | null>>('/destination/domestic-destination', {
     query: { search, limit, offset }
   })
+
+  // "Data not found" comes back as a 404 envelope; that is an empty result,
+  // not a failure the UI should surface as an error.
+  if (res?.meta?.code === 404) return []
 
   return (unwrap(res, 'Gagal mencari lokasi') ?? []).map(d => ({
     id: d.id,

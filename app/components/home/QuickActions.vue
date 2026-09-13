@@ -12,20 +12,20 @@ const actions = [
       <NuxtLink
         v-for="action in actions"
         :key="action.to"
+        v-ripple.dark
         :to="action.to"
-        class="flex w-20 flex-col items-center gap-2.5 lg:w-auto lg:flex-row lg:justify-start lg:gap-3.5 lg:rounded-2xl lg:bg-white lg:px-5 lg:py-4 lg:shadow-card-flat lg:hover:-translate-y-[3px] lg:hover:shadow-card-hover"
+        class="flex w-20 flex-col items-center gap-2.5 rounded-2xl py-1 lg:w-auto lg:flex-row lg:justify-start lg:gap-3.5 lg:bg-white lg:px-5 lg:py-4 lg:shadow-card-flat lg:hover:-translate-y-[3px] lg:hover:shadow-card-hover"
       >
         <div
-          v-ripple.dark
-          class="flex size-14 items-center justify-center rounded-2xl lg:size-11"
+          class="pointer-events-none flex size-14 items-center justify-center rounded-2xl lg:size-11"
           :class="action.iconClass"
         >
           <UIcon
             :name="action.icon"
-            class="pointer-events-none size-6 lg:size-4.5"
+            class="size-6 lg:size-4.5"
           />
         </div>
-        <span class="text-center text-sm font-semibold text-gray-700">{{ action.label }}</span>
+        <span class="pointer-events-none text-center text-sm font-semibold text-gray-700">{{ action.label }}</span>
       </NuxtLink>
     </div>
   </div>

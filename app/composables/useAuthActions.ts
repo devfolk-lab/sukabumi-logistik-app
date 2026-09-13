@@ -17,7 +17,18 @@ export function useAuthActions() {
   }
 
   async function logout() {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) throw new Error(error.message)
+  }
+
+  /**
+   * Supabase's `updateUser` never checks the old password, so it is verified
+   * with a fresh sign-in first — which also refreshes the session it needs.
+   */
+  async function changePassword(email: string, current: string, next: string) {
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: current })
+    if (authError) throw new Error('Password saat ini salah.')
+    await updatePassword(next)
   }
 
   /** Sends the magic link that lands the user on /reset-password. */
@@ -32,5 +43,5 @@ export function useAuthActions() {
     if (error) throw new Error(error.message)
   }
 
-  return { login, register, logout, sendResetLink, updatePassword }
+  return { login, register, logout, sendResetLink, updatePassword, changePassword }
 }

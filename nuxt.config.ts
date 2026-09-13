@@ -9,6 +9,11 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase'
   ],
 
+  // Client-only rendering: every screen is user-scoped and there is nothing
+  // to index, so the server ships the shell in `app/spa-loading-template.html`
+  // and each page shows its own skeleton while data loads.
+  ssr: false,
+
   devtools: {
     enabled: true
   },
@@ -19,6 +24,8 @@ export default defineNuxtConfig({
     preference: 'light',
     fallback: 'light'
   },
+
+  spaLoadingTemplate: true,
 
   runtimeConfig: {
     // RajaOngkir API V2 (Komerce). The published path is /api/v1 despite the
@@ -34,11 +41,6 @@ export default defineNuxtConfig({
       baseUrl: 'https://api-sandbox.collaborator.komerce.id',
       enabled: true
     }
-  },
-
-  routeRules: {
-    // Every route is user-scoped now, so nothing can be prerendered.
-    '/**': { ssr: true }
   },
 
   compatibilityDate: '2026-06-30',

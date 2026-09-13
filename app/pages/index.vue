@@ -1,6 +1,6 @@
 <script setup lang="ts">
-const { data: profile } = await useProfile()
-const { data: shipments, status } = await useActiveShipments()
+const { data: profile } = useProfile()
+const { data: shipments, status } = useActiveShipments()
 
 const salam = computed(() => {
   const jam = new Date().getHours()
@@ -14,37 +14,23 @@ const salam = computed(() => {
 <template>
   <div>
     <AppPageHero>
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-sm font-medium text-white/70">
-            {{ salam }}
-          </p>
-          <h1 class="mt-0.5 flex items-center gap-1.5 text-2xl font-bold text-white">
-            {{ profile?.nama ?? '...' }}
+      <div>
+        <p class="text-sm font-medium text-white/70">
+          {{ salam }}
+        </p>
+        <h1 class="mt-0.5 flex items-center gap-1.5 text-2xl font-bold text-white">
+          <USkeleton
+            v-if="!profile"
+            class="h-7 w-40 rounded-lg bg-white/15"
+          />
+          <template v-else>
+            {{ profile.nama }}
             <UIcon
               name="i-lucide-hand"
               class="size-5"
             />
-          </h1>
-        </div>
-        <button
-          type="button"
-          class="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10"
-          aria-label="Notifikasi"
-        >
-          <span
-            v-ripple
-            class="absolute inset-0 rounded-2xl"
-          />
-          <UIcon
-            name="i-lucide-bell"
-            class="relative z-10 size-5 text-white pointer-events-none"
-          />
-          <span
-            v-if="shipments.length"
-            class="pointer-events-none absolute -top-1.5 -right-1.5 z-20 flex size-6 items-center justify-center rounded-full border-2 border-[#002144] bg-red-500 text-sm font-bold text-white"
-          >{{ shipments.length }}</span>
-        </button>
+          </template>
+        </h1>
       </div>
     </AppPageHero>
 
@@ -90,9 +76,14 @@ const salam = computed(() => {
         <NuxtLink
           v-for="shipment in shipments"
           :key="shipment.resi"
+          v-ripple.dark
           :to="`/lacak/${shipment.resi}`"
+          class="block rounded-3xl"
         >
-          <HomeActiveShipmentCard :shipment="shipment" />
+          <HomeActiveShipmentCard
+            :shipment="shipment"
+            class="pointer-events-none"
+          />
         </NuxtLink>
       </div>
       <div
@@ -112,6 +103,7 @@ const salam = computed(() => {
           Kirim paket pertamamu, statusnya akan tampil di sini.
         </p>
         <UButton
+          v-ripple
           to="/kirim"
           size="lg"
           class="mt-4 font-bold"

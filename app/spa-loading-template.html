@@ -1,0 +1,54 @@
+<style>
+  .sl-splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #002144, #003366, #004080);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: #fff;
+  }
+  .sl-splash__mark {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sl-splash__spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #d4a124;
+    animation: sl-spin 0.8s linear infinite;
+  }
+  .sl-splash__title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .sl-splash__sub {
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  @keyframes sl-spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+<div class="sl-splash">
+  <div class="sl-splash__mark">
+    <div class="sl-splash__spinner"></div>
+  </div>
+  <div style="text-align:center">
+    <div class="sl-splash__title">Sukabumi Logistik</div>
+    <div class="sl-splash__sub">Memuat aplikasi...</div>
+  </div>
+</div>

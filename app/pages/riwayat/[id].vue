@@ -9,26 +9,23 @@ const id = computed(() => String(route.params.id))
 
 const request = useRequestFetch()
 
-const { data, refresh } = await useAsyncData(
+const { data, status, error, refresh } = useAsyncData(
   () => `order-${id.value}`,
   () => request<{ order: Order, shipment: Shipment }>(`/api/orders/${id.value}`)
 )
 
-if (!data.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Pesanan tidak ditemukan', fatal: true })
-}
+const loading = computed(() => status.value === 'pending' || status.value === 'idle')
+const order = computed(() => data.value?.order)
+const shipment = computed(() => data.value?.shipment)
 
-const order = computed(() => data.value!.order)
-const shipment = computed(() => data.value!.shipment)
-
-const belumBayar = computed(() => order.value.stage === 'MENUNGGU_PEMBAYARAN')
+const belumBayar = computed(() => order.value?.stage === 'MENUNGGU_PEMBAYARAN')
 const bisaDibatalkan = computed(() =>
-  order.value.stage === 'MENUNGGU_PEMBAYARAN' || order.value.stage === 'DIPROSES' || order.value.stage === 'DIJEMPUT'
+  order.value?.stage === 'MENUNGGU_PEMBAYARAN' || order.value?.stage === 'DIPROSES' || order.value?.stage === 'DIJEMPUT'
 )
 
 // The four-step stepper predates the six persisted stages; map onto it.
 const stepsCompleted = computed(() => {
-  switch (order.value.stage) {
+  switch (order.value?.stage) {
     case 'MENUNGGU_PEMBAYARAN': return 1
     case 'DIPROSES': return 2
     case 'DIJEMPUT': return 3
@@ -72,7 +69,7 @@ async function cancel() {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/riwayat')"
         >
           <span
@@ -86,16 +83,41 @@ async function cancel() {
         </button>
         <div class="min-w-0">
           <h1 class="truncate text-lg font-bold text-white">
-            {{ order.resi }}
+            {{ order?.resi ?? 'Detail Pesanan' }}
           </h1>
           <p class="text-sm text-white/60">
-            {{ order.date }}
+            {{ order?.date ?? 'Riwayat pengiriman' }}
           </p>
         </div>
       </div>
     </AppPageHero>
 
-    <AppPageContent class="mt-5 space-y-5 pb-32">
+    <AppPageContent
+      v-if="loading"
+      class="mt-5 space-y-5 pb-32"
+    >
+      <USkeleton class="h-28 rounded-3xl" />
+      <USkeleton class="h-40 rounded-3xl" />
+      <USkeleton class="h-36 rounded-3xl" />
+    </AppPageContent>
+
+    <AppPageContent
+      v-else-if="error || !order || !shipment"
+      class="mt-5 pb-10"
+    >
+      <AppNotFound
+        title="Pesanan tidak ditemukan"
+        :description="apiMessage(error, 'Pesanan ini mungkin sudah dihapus atau bukan milik akunmu.')"
+        back-label="Kembali ke Riwayat"
+        back-to="/riwayat"
+        :retry="refresh"
+      />
+    </AppPageContent>
+
+    <AppPageContent
+      v-else
+      class="mt-5 space-y-5 pb-32"
+    >
       <div
         v-if="order.status !== 'batal'"
         class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
@@ -211,8 +233,12 @@ async function cancel() {
       <!-- Courier + Price -->
       <div class="relative overflow-hidden rounded-3xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-5 shadow-lg shadow-primary/20">
         <div class="absolute top-0 right-0 size-32 -translate-y-1/3 translate-x-1/4 rounded-full bg-white/5" />
-        <div class="relative z-10 flex items-center justify-between">
-          <div class="min-w-0">
+        <div class="relative z-10 flex items-center justify-between gap-3">
+          <AppCourierLogo
+            :code="order.courierCode"
+            class="size-12 rounded-xl text-sm"
+          />
+          <div class="min-w-0 flex-1">
             <p class="text-sm text-white/60">
               Kurir
             </p>
@@ -227,7 +253,7 @@ async function cancel() {
       </div>
     </AppPageContent>
 
-    <AppStickyBar>
+    <AppStickyBar v-if="order && !loading">
       <div class="w-full space-y-2">
         <button
           type="button"

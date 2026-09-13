@@ -2,7 +2,7 @@
 import type { Shipment } from '~/types'
 
 const nav = useAppNav()
-const { data: shipments, status } = await useActiveShipments()
+const { data: shipments, status } = useActiveShipments()
 
 function progress(shipment: Shipment): number {
   const done = shipment.timeline.filter(s => s.done).length
@@ -16,7 +16,7 @@ function progress(shipment: Shipment): number {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/')"
         >
           <span
@@ -47,7 +47,7 @@ function progress(shipment: Shipment): number {
           Paket Sedang Berjalan
         </h2>
         <div
-          v-if="status === 'pending'"
+          v-if="status === 'pending' || status === 'idle'"
           class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
         >
           <USkeleton
@@ -73,12 +73,10 @@ function progress(shipment: Shipment): number {
             :to="`/lacak/${shipment.resi}`"
             class="flex items-center gap-4 rounded-3xl bg-white p-4 shadow-card lg:shadow-card-flat"
           >
-            <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary-50">
-              <UIcon
-                name="i-lucide-package"
-                class="size-6 text-primary"
-              />
-            </div>
+            <AppCourierLogo
+              :code="shipment.courierCode"
+              class="pointer-events-none size-14 rounded-2xl text-sm"
+            />
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-2">
                 <h4 class="truncate text-base font-bold text-gray-800">

@@ -28,20 +28,12 @@ const meta = computed(() => typeMeta[props.courier.type])
   >
     <div class="p-4">
       <div class="flex items-start gap-3">
-        <span
-          class="flex size-14 shrink-0 items-center justify-center rounded-2xl shadow-md"
-          :style="{ backgroundImage: `linear-gradient(to bottom right, ${courier.brand.from}, ${courier.brand.to})` }"
-        >
-          <UIcon
-            v-if="courier.brand.icon"
-            :name="courier.brand.icon"
-            class="size-6 text-white"
-          />
-          <span
-            v-else
-            class="text-base font-extrabold tracking-tight text-white"
-          >{{ courier.brand.initials }}</span>
-        </span>
+        <AppCourierLogo
+          :code="courier.code"
+          :brand="courier.brand"
+          :label="courier.name"
+          class="size-14 rounded-2xl text-base shadow-md"
+        />
         <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
@@ -104,7 +96,7 @@ const meta = computed(() => typeMeta[props.courier.type])
         <UButton
           :color="selected ? 'success' : 'primary'"
           size="lg"
-          class="font-bold"
+          class="pointer-events-none font-bold"
         >
           {{ selected ? 'Terpilih' : 'Pilih' }}
         </UButton>

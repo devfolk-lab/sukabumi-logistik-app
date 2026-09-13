@@ -110,6 +110,7 @@ async function submit() {
       </UFormField>
 
       <UButton
+        v-ripple
         type="submit"
         size="xl"
         block

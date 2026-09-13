@@ -5,12 +5,13 @@ const booking = useBookingStore()
 const nav = useAppNav()
 const toast = useToast()
 
-const { data: profile } = await useProfile()
-const { data: addresses } = await useAddresses()
+const { data: profile } = useProfile()
+const { data: addresses } = useAddresses()
 
 // Prefill the sender from the saved default address so the common case is one
-// tap. Anything the user already typed wins.
-onMounted(() => {
+// tap. Anything the user already typed wins. The data is fetched client-side,
+// so this runs once both requests have settled rather than on mount.
+watch([profile, addresses], () => {
   const utama = addresses.value.find(a => a.main)
 
   if (utama && !booking.sender.nama) {
@@ -30,11 +31,10 @@ onMounted(() => {
       zipCode: utama.zipCode ?? ''
     }
   }
-})
+}, { immediate: true })
 
 const kurang = computed(() => {
   if (!booking.hasRoute) return 'Pilih lokasi penjemputan dan tujuan dulu.'
-  if (!booking.hasParties) return 'Lengkapi detail pengirim dan penerima dulu.'
   if (booking.weight <= 0) return 'Isi berat paket dulu.'
   return ''
 })
@@ -54,7 +54,7 @@ async function next() {
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10"
+          class="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20"
           @click="nav.back('/')"
         >
           <span
@@ -78,16 +78,6 @@ async function next() {
     </AppPageHero>
 
     <AppPageContent class="mt-5 space-y-5 pb-32">
-      <KirimPartyDetailsSection
-        v-model="booking.sender"
-        title="Detail Pengirim"
-        icon="i-lucide-user"
-      />
-      <KirimPartyDetailsSection
-        v-model="booking.receiver"
-        title="Detail Penerima"
-        icon="i-lucide-user"
-      />
       <KirimPackageForm />
       <KirimInstantToggle />
     </AppPageContent>

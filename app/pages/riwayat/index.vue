@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { OrderStatus } from '~/types'
 
-const { data: orders, status } = await useOrders()
+const { data: orders, status } = useOrders()
 
 const filter = ref<OrderStatus | 'all'>('all')
 
 const tabs = [
-  { label: 'Semua', value: 'all' },
-  { label: 'Selesai', value: 'selesai' },
-  { label: 'Diproses', value: 'proses' },
-  { label: 'Dibatalkan', value: 'batal' }
+  { label: 'Semua', value: 'all', icon: 'i-lucide-layers' },
+  { label: 'Diproses', value: 'proses', icon: 'i-lucide-truck' },
+  { label: 'Selesai', value: 'selesai', icon: 'i-lucide-circle-check-big' },
+  { label: 'Dibatalkan', value: 'batal', icon: 'i-lucide-x' }
 ]
 
 const filtered = computed(() =>
@@ -29,19 +29,15 @@ const filtered = computed(() =>
     </AppPageHero>
 
     <AppPageContent class="pt-4 pb-2">
-      <UTabs
+      <AppSegmentedTabs
         v-model="filter"
         :items="tabs"
-        variant="pill"
-        :content="false"
-        class="w-full"
-        :ui="{ list: 'overflow-x-auto hide-scrollbar' }"
       />
     </AppPageContent>
 
     <AppPageContent class="mt-2 mb-6">
       <div
-        v-if="status === 'pending'"
+        v-if="status === 'pending' || status === 'idle'"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-5"
       >
         <USkeleton

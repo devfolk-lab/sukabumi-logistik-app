@@ -29,21 +29,21 @@ function isActive(to: string): boolean {
       <NuxtLink
         v-for="item in items"
         :key="item.to"
+        v-ripple.dark
         :to="item.to"
-        class="flex w-16 flex-col items-center gap-1"
+        class="flex w-16 flex-col items-center gap-1 rounded-2xl py-0.5"
         :class="isActive(item.to) ? 'text-primary' : 'text-gray-400'"
       >
         <span
-          v-ripple.dark
-          class="flex size-11 items-center justify-center rounded-2xl transition-all"
+          class="pointer-events-none flex size-11 items-center justify-center rounded-2xl transition-all duration-200"
           :class="isActive(item.to) ? 'bg-primary text-white shadow-lg shadow-primary/25' : ''"
         >
           <UIcon
             :name="item.icon"
-            class="pointer-events-none size-5"
+            class="size-5"
           />
         </span>
-        <span class="text-xs font-semibold">{{ item.label }}</span>
+        <span class="pointer-events-none text-xs font-semibold">{{ item.label }}</span>
       </NuxtLink>
     </div>
   </nav>
