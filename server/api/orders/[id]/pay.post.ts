@@ -44,7 +44,6 @@ export default defineEventHandler(async (event): Promise<Order> => {
       courierCode: order.courierCode,
       serviceCode: order.serviceCode,
       shippingCost: order.shippingCost,
-      insuranceValue: order.insuranceFee,
       total: order.total,
       weightGram: order.weightGram,
       content: order.content

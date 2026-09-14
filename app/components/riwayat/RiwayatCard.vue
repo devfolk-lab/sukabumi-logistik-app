@@ -10,8 +10,8 @@ const statusMeta: Record<Order['status'], { icon: string, bg: string, text: stri
 }
 
 const meta = computed(() => statusMeta[props.order.status])
-const pickupCity = computed(() => props.order.pickup.split(',')[0])
-const deliveryCity = computed(() => props.order.delivery.split(',')[0])
+const pickupCity = computed(() => titleCase(props.order.pickup.split(',')[0] ?? ''))
+const deliveryCity = computed(() => titleCase(props.order.delivery.split(',')[0] ?? ''))
 </script>
 
 <template>

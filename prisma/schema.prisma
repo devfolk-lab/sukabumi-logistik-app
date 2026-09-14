@@ -21,12 +21,6 @@ enum OrderStatus {
   BATAL
 }
 
-enum CourierType {
-  REGULAR
-  SAMEDAY
-  INSTANT
-}
-
 model Profile {
   id        String   @id @db.Uuid
   nama      String
@@ -94,16 +88,15 @@ model Order {
   courierName String
   serviceCode String
   serviceName String
-  courierType CourierType @default(REGULAR)
   etd         String?
 
   weightGram Int
   content    String
 
+  // `total` equals `shippingCost` today; kept separate so surcharges can be
+  // added later without rewriting history.
   shippingCost Int
-  insuranceFee Int @default(0)
   total        Int
-  insured      Boolean @default(false)
 
   // Set once the shipment is handed to the courier via Komship.
   awb            String?

@@ -4,6 +4,7 @@ import type { Address } from '~/types'
 defineProps<{ address: Address }>()
 
 const emit = defineEmits<{
+  edit: [id: string]
   remove: [id: string]
   setMain: [id: string]
 }>()
@@ -40,6 +41,18 @@ const emit = defineEmits<{
         >
           <UIcon
             name="i-lucide-star"
+            class="pointer-events-none size-4"
+          />
+        </button>
+        <button
+          v-ripple.dark
+          type="button"
+          class="flex size-8 items-center justify-center rounded-lg text-gray-400"
+          aria-label="Ubah alamat"
+          @click="emit('edit', address.id)"
+        >
+          <UIcon
+            name="i-lucide-pencil"
             class="pointer-events-none size-4"
           />
         </button>

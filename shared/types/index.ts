@@ -1,5 +1,3 @@
-export type CourierType = 'regular' | 'instant' | 'sameday'
-
 export interface CourierBrand {
   from: string
   to: string
@@ -11,20 +9,21 @@ export interface CourierBrand {
   logoOnBrand?: boolean
 }
 
-/** A live RajaOngkir rate with local brand metadata merged in. */
+/**
+ * One RajaOngkir rate row, passed through as the API returns it. Only `id`
+ * and `brand` are ours; everything else is RajaOngkir's own value so what the
+ * customer sees is exactly what the carrier quoted.
+ */
 export interface Courier {
   /** `${code}:${service}` — unique per rate row, not per carrier. */
   id: string
   code: string
   name: string
   service: string
-  serviceName: string
-  type: CourierType
-  price: number
-  eta: string
-  pickup: string
-  insured: boolean
-  vehicle: { label: string, icon: string }
+  description: string
+  cost: number
+  /** RajaOngkir's `etd` verbatim (e.g. "2-3 day", or "" when not provided). */
+  etd: string
   brand: CourierBrand
 }
 
@@ -63,13 +62,19 @@ export interface RoutePoint {
 
 export interface Order {
   id: string
+  /** Internal reference (SL-2026-8843); shown only when nothing better exists. */
   orderNo: string
+  /** Best public reference: carrier AWB, else Komship order number, else `orderNo`. */
   resi: string
+  /** Komship's order number, once the shipment has been handed over. */
+  komshipOrderNo: string | null
   stage: OrderStage
   status: OrderStatus
   date: string
   pickup: string
   delivery: string
+  originLabel: string
+  destinationLabel: string
   courier: string
   courierCode: string
   price: number
@@ -88,10 +93,11 @@ export interface TimelineStep {
 
 export interface Shipment {
   resi: string
-  orderId: string
+  /** Null for a waybill looked up straight from RajaOngkir with no order here. */
+  orderId: string | null
   courier: string
   courierCode: string
-  price: number
+  price: number | null
   weight: string
   content: string
   pickup: RoutePoint

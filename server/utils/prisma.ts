@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../generated/prisma/client'
 import { SUPABASE_ROOT_CA } from './supabase-ca'
+import { supabaseDatabaseUrls } from './supabase-db'
 
 // Nitro can re-evaluate modules in dev; cache on globalThis so HMR does not
 // open a new pool on every reload.
@@ -9,10 +10,7 @@ declare global {
 }
 
 function createClient(): PrismaClient {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    throw new Error('DATABASE_URL is not set')
-  }
+  const url = supabaseDatabaseUrls().transaction
 
   // node-postgres parses `sslmode` out of the connection string and that parsed
   // value wins over an explicit `ssl` object, which would silently discard the

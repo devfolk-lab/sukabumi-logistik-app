@@ -35,10 +35,10 @@ function swap(): void {
       <!-- Pickup -->
       <div class="min-w-0 pb-2.5">
         <p class="truncate text-base font-bold text-white">
-          {{ booking.pickup.city }}
+          {{ booking.origin ? destinationTitle(booking.origin) : '-' }}
         </p>
-        <p class="truncate text-sm text-white/50">
-          {{ booking.pickup.area }}
+        <p class="truncate text-xs text-white/50">
+          {{ booking.origin ? destinationSubtitle(booking.origin) : '' }}
         </p>
       </div>
 
@@ -63,10 +63,10 @@ function swap(): void {
       <!-- Delivery -->
       <div class="min-w-0">
         <p class="truncate text-base font-bold text-white">
-          {{ booking.delivery.city }}
+          {{ booking.destination ? destinationTitle(booking.destination) : '-' }}
         </p>
-        <p class="truncate text-sm text-white/50">
-          {{ booking.delivery.area }}
+        <p class="truncate text-xs text-white/50">
+          {{ booking.destination ? destinationSubtitle(booking.destination) : '' }}
         </p>
       </div>
     </div>

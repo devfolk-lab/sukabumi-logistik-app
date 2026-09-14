@@ -1,8 +1,17 @@
 import 'dotenv/config'
-import { defineConfig, env } from 'prisma/config'
+import { defineConfig } from 'prisma/config'
+import { supabaseDatabaseUrls } from './server/utils/supabase-db'
 
 // Migrations run against the Supavisor *session* pooler (5432); the transaction
 // pooler on 6543 cannot hold the advisory locks Prisma Migrate needs.
+//
+// `prisma generate` (run by postinstall, including in CI where there is no
+// `.env`) needs no database, so the URL is only resolved once the Supabase
+// settings are present. Migrate and seed refuse to run without a datasource.
+const datasource = process.env.NUXT_SUPABASE_PASSWORD
+  ? { url: supabaseDatabaseUrls().session }
+  : undefined
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
@@ -12,7 +21,5 @@ export default defineConfig({
     // built-in type stripping does not resolve.
     seed: 'tsx prisma/seed.ts'
   },
-  datasource: {
-    url: env('DIRECT_URL')
-  }
+  datasource
 })

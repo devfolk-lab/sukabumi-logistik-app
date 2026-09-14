@@ -70,7 +70,7 @@ function progress(shipment: Shipment): number {
             v-for="shipment in shipments"
             :key="shipment.resi"
             v-ripple.dark
-            :to="`/lacak/${shipment.resi}`"
+            :to="{ path: `/lacak/${shipment.resi}`, query: { courier: shipment.courierCode } }"
             class="flex items-center gap-4 rounded-3xl bg-white p-4 shadow-card lg:shadow-card-flat"
           >
             <AppCourierLogo

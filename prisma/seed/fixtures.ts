@@ -7,7 +7,6 @@
  */
 
 type Stage = 'MENUNGGU_PEMBAYARAN' | 'DIPROSES' | 'DIJEMPUT' | 'DALAM_PERJALANAN' | 'SELESAI' | 'BATAL'
-type CourierType = 'REGULAR' | 'SAMEDAY' | 'INSTANT'
 
 /** Frozen at import so every timestamp in one run shares an origin. */
 const NOW = Date.now()
@@ -83,12 +82,10 @@ export interface SeedOrder {
   courierName: string
   serviceCode: string
   serviceName: string
-  courierType: CourierType
   etd: string
   weightGram: number
   content: string
   shippingCost: number
-  insured: boolean
   /** Hours before the run started. */
   createdAgo: number
   updatedAgo: number
@@ -106,9 +103,6 @@ export interface SeedAccount {
   addresses: SeedAddress[]
   orders: SeedOrder[]
 }
-
-/** Flat surcharge, kept in step with `shared/utils/pricing.ts`. */
-const INSURANCE_FEE = 2000
 
 const demo: SeedAccount = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -154,12 +148,10 @@ const demo: SeedAccount = {
       courierName: 'JNE',
       serviceCode: 'REG',
       serviceName: 'Layanan Reguler',
-      courierType: 'REGULAR',
       etd: '2-3 hari',
       weightGram: 1500,
       content: 'Pakaian dan aksesoris',
       shippingCost: 24000,
-      insured: true,
       createdAgo: 12 * HARI,
       updatedAgo: 9 * HARI,
       awb: 'JNE0012845571',
@@ -184,12 +176,10 @@ const demo: SeedAccount = {
       courierName: 'SiCepat Express',
       serviceCode: 'REG',
       serviceName: 'Layanan Reguler',
-      courierType: 'REGULAR',
       etd: '1-2 hari',
       weightGram: 800,
       content: 'Buku dan alat tulis',
       shippingCost: 12000,
-      insured: false,
       createdAgo: 9 * HARI,
       updatedAgo: 7 * HARI
     },
@@ -205,12 +195,10 @@ const demo: SeedAccount = {
       courierName: 'J&T Express',
       serviceCode: 'EZ',
       serviceName: 'Reguler',
-      courierType: 'REGULAR',
       etd: '3-4 hari',
       weightGram: 2000,
       content: 'Sepatu olahraga',
       shippingCost: 38000,
-      insured: false,
       createdAgo: 7 * HARI,
       updatedAgo: 7 * HARI - 3
     },
@@ -226,12 +214,10 @@ const demo: SeedAccount = {
       courierName: 'AnterAja',
       serviceCode: 'REG',
       serviceName: 'Anteraja Regular',
-      courierType: 'REGULAR',
       etd: '3-5 hari',
       weightGram: 3200,
       content: 'Kopi bubuk 3 kg',
       shippingCost: 52000,
-      insured: true,
       createdAgo: 4 * HARI,
       updatedAgo: 1 * HARI,
       awb: 'ANT100234567891',
@@ -255,12 +241,10 @@ const demo: SeedAccount = {
       courierName: 'POS Indonesia',
       serviceCode: 'Pos Reguler',
       serviceName: 'Pos Reguler',
-      courierType: 'REGULAR',
       etd: '4-6 hari',
       weightGram: 5000,
       content: 'Kerajinan bambu',
       shippingCost: 78000,
-      insured: true,
       createdAgo: 2 * HARI,
       updatedAgo: 1 * HARI - 6
     },
@@ -276,12 +260,10 @@ const demo: SeedAccount = {
       courierName: 'SiCepat Express',
       serviceCode: 'SDS',
       serviceName: 'SiCepat SDS Same Day Service',
-      courierType: 'SAMEDAY',
       etd: '1 hari',
       weightGram: 1000,
       content: 'Dokumen kontrak',
       shippingCost: 15000,
-      insured: false,
       createdAgo: 26,
       updatedAgo: 22
     },
@@ -297,12 +279,10 @@ const demo: SeedAccount = {
       courierName: 'TIKI',
       serviceCode: 'ONS',
       serviceName: 'Over Night Service',
-      courierType: 'REGULAR',
       etd: '1 hari',
       weightGram: 1200,
       content: 'Oleh-oleh mochi Sukabumi',
       shippingCost: 29000,
-      insured: true,
       createdAgo: 5,
       updatedAgo: 5
     },
@@ -318,12 +298,10 @@ const demo: SeedAccount = {
       courierName: 'Ninja Xpress',
       serviceCode: 'STANDARD',
       serviceName: 'Ninja Standard',
-      courierType: 'REGULAR',
       etd: '1-2 hari',
       weightGram: 700,
       content: 'Casing handphone',
       shippingCost: 11000,
-      insured: false,
       createdAgo: 3 * HARI,
       updatedAgo: 6,
       awb: 'NJX0098871234',
@@ -368,12 +346,10 @@ const siti: SeedAccount = {
       courierName: 'JNE',
       serviceCode: 'REG',
       serviceName: 'Layanan Reguler',
-      courierType: 'REGULAR',
       etd: '2-3 hari',
       weightGram: 2500,
       content: 'Keripik singkong 2.5 kg',
       shippingCost: 31000,
-      insured: false,
       createdAgo: 2 * HARI,
       updatedAgo: 1 * HARI
     },
@@ -389,12 +365,10 @@ const siti: SeedAccount = {
       courierName: 'J&T Express',
       serviceCode: 'EZ',
       serviceName: 'Reguler',
-      courierType: 'REGULAR',
       etd: '1-2 hari',
       weightGram: 900,
       content: 'Mukena bordir',
       shippingCost: 14000,
-      insured: false,
       createdAgo: 8 * HARI,
       updatedAgo: 6 * HARI
     }
@@ -439,7 +413,6 @@ export function addressData(address: SeedAddress) {
 export function orderData(account: SeedAccount, order: SeedOrder) {
   const origin = place(order.from)
   const destination = place(order.to)
-  const insuranceFee = order.insured ? INSURANCE_FEE : 0
 
   return {
     orderNo: order.orderNo,
@@ -465,16 +438,13 @@ export function orderData(account: SeedAccount, order: SeedOrder) {
     courierName: order.courierName,
     serviceCode: order.serviceCode,
     serviceName: order.serviceName,
-    courierType: order.courierType,
     etd: order.etd,
 
     weightGram: order.weightGram,
     content: order.content,
 
     shippingCost: order.shippingCost,
-    insuranceFee,
-    total: order.shippingCost + insuranceFee,
-    insured: order.insured,
+    total: order.shippingCost,
 
     awb: order.awb ?? null,
     // Left null on purpose: `syncTracking` would otherwise chase a Komship order

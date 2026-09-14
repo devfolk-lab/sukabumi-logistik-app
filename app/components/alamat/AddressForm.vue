@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Destination } from '~/types'
+import type { Address, Destination } from '~/types'
 
 export interface AddressFormPayload {
   label: string
@@ -11,23 +11,39 @@ export interface AddressFormPayload {
   zipCode: string | null
 }
 
-const props = defineProps<{ pending?: boolean }>()
+/** Pass `address` to edit an existing row; the form starts from its values. */
+const props = defineProps<{
+  pending?: boolean
+  address?: Address | null
+}>()
 
 const emit = defineEmits<{
   submit: [payload: AddressFormPayload]
   cancel: []
 }>()
 
-const labelOptions = ['Rumah', 'Kantor', 'Lainnya']
+const labelOptions = [
+  { label: 'Rumah', value: 'Rumah', icon: 'i-lucide-house' },
+  { label: 'Kantor', value: 'Kantor', icon: 'i-lucide-building-2' },
+  { label: 'Lainnya', value: 'Lainnya', icon: 'i-lucide-map-pin' }
+]
 
 const form = reactive({
-  label: 'Rumah',
-  nama: '',
-  telp: '',
-  alamat: ''
+  label: props.address?.label ?? 'Rumah',
+  nama: props.address?.nama ?? '',
+  telp: props.address?.telp ?? '',
+  alamat: props.address?.alamat ?? ''
 })
 
-const destination = ref<Destination | undefined>()
+// A saved address only keeps the subdistrict id and label, so the picker's
+// initial value is rebuilt from those.
+const destination = ref<Destination | undefined>(
+  props.address?.destinationId
+    ? destinationFromLabel(props.address.destinationId, props.address.destinationLabel ?? '', props.address.zipCode)
+    : undefined
+)
+
+const isEditing = computed(() => Boolean(props.address))
 
 const touched = reactive({ nama: false, telp: false, alamat: false })
 
@@ -61,18 +77,27 @@ function submit() {
 </script>
 
 <template>
-  <div class="space-y-3 rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
-    <h3 class="mb-1 text-base font-bold text-gray-800">
-      Alamat Baru
-    </h3>
-
-    <UFormField label="Label Alamat">
-      <USelect
-        v-model="form.label"
-        :items="labelOptions"
-        size="xl"
-        class="w-full"
-      />
+  <div class="space-y-3 p-5">
+    <UFormField label="Label alamat">
+      <div class="flex gap-2">
+        <button
+          v-for="option in labelOptions"
+          :key="option.value"
+          v-ripple="{ dark: form.label !== option.value }"
+          type="button"
+          class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-2 py-2.5 text-sm font-semibold"
+          :class="form.label === option.value
+            ? 'border-primary bg-primary-50 text-primary'
+            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
+          @click="form.label = option.value"
+        >
+          <UIcon
+            :name="option.icon"
+            class="pointer-events-none size-4"
+          />
+          <span class="pointer-events-none">{{ option.label }}</span>
+        </button>
+      </div>
     </UFormField>
 
     <UFormField
@@ -82,6 +107,7 @@ function submit() {
       <UInput
         v-model="form.nama"
         placeholder="Nama Penerima"
+        icon="i-lucide-user"
         size="xl"
         class="w-full"
         @blur="touched.nama = true"
@@ -96,6 +122,7 @@ function submit() {
         v-model="form.telp"
         type="tel"
         placeholder="No. Telepon"
+        icon="i-lucide-phone"
         size="xl"
         class="w-full"
         @blur="touched.telp = true"
@@ -103,7 +130,7 @@ function submit() {
     </UFormField>
 
     <UFormField
-      label="Kecamatan / Kelurahan"
+      label="Kelurahan / Kecamatan"
       help="Dipakai untuk menghitung ongkir saat memesan dari alamat ini."
     >
       <AppDestinationSelect v-model="destination" />
@@ -116,7 +143,8 @@ function submit() {
       <UTextarea
         v-model="form.alamat"
         :rows="2"
-        placeholder="Alamat lengkap (jalan, RT/RW, kelurahan, kota, kode pos)"
+        placeholder="Jalan, nomor rumah, RT/RW, patokan"
+        icon="i-lucide-map-pin"
         size="xl"
         class="w-full"
         @blur="touched.alamat = true"
@@ -142,7 +170,7 @@ function submit() {
           v-ripple
           class="absolute inset-0 rounded-2xl"
         />
-        <span class="relative z-10 pointer-events-none">{{ pending ? 'Menyimpan...' : 'Simpan Alamat' }}</span>
+        <span class="relative z-10 pointer-events-none">{{ pending ? 'Menyimpan...' : isEditing ? 'Simpan Perubahan' : 'Simpan Alamat' }}</span>
       </button>
     </div>
   </div>

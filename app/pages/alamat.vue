@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Address } from '~/types'
 import type { AddressFormPayload } from '~/components/alamat/AddressForm.vue'
 
 const nav = useAppNav()
@@ -9,14 +10,31 @@ const { data: addresses, status, refresh } = useAddresses()
 const showForm = ref(false)
 const saving = ref(false)
 
-async function addAddress(payload: AddressFormPayload) {
+// The row being edited; null means the dialog is adding a new one.
+const editing = ref<Address | null>(null)
+
+function openAdd() {
+  editing.value = null
+  showForm.value = true
+}
+
+function openEdit(id: string) {
+  editing.value = addresses.value.find(a => a.id === id) ?? null
+  showForm.value = editing.value !== null
+}
+
+async function saveAddress(payload: AddressFormPayload) {
   saving.value = true
 
   try {
-    await $fetch('/api/addresses', { method: 'POST', body: payload })
+    if (editing.value) {
+      await $fetch(`/api/addresses/${editing.value.id}`, { method: 'PATCH', body: payload })
+    } else {
+      await $fetch('/api/addresses', { method: 'POST', body: payload })
+    }
     await refresh()
     showForm.value = false
-    toast.add({ title: 'Alamat tersimpan' })
+    toast.add({ title: editing.value ? 'Alamat diperbarui' : 'Alamat tersimpan' })
   } catch (error) {
     toast.add({
       title: 'Gagal menyimpan alamat',
@@ -103,37 +121,70 @@ async function setMain(id: string) {
           v-for="address in addresses"
           :key="address.id"
           :address="address"
+          @edit="openEdit"
           @remove="removeAddress"
           @set-main="setMain"
         />
       </div>
-      <p
-        v-else-if="!showForm"
-        class="rounded-3xl bg-white p-6 text-center text-sm text-gray-500 shadow-card lg:shadow-card-flat"
+      <div
+        v-else
+        class="rounded-3xl bg-white p-6 text-center shadow-card lg:shadow-card-flat"
       >
-        Belum ada alamat tersimpan.
-      </p>
+        <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary-50">
+          <UIcon
+            name="i-lucide-map-pinned"
+            class="size-6 text-primary"
+          />
+        </div>
+        <p class="mt-3 text-base font-bold text-gray-800">
+          Belum ada alamat tersimpan
+        </p>
+        <p class="mt-1 text-sm text-gray-500">
+          Simpan alamat rumah atau toko supaya kirim paket cukup sekali tap.
+        </p>
+      </div>
 
       <button
-        v-if="!showForm"
-        v-ripple.dark
         type="button"
-        class="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white py-3.5 text-base font-bold text-primary"
-        @click="showForm = true"
+        class="relative flex w-full items-center gap-4 rounded-3xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-4 text-left text-white shadow-lg shadow-primary/20"
+        @click="openAdd"
       >
-        <UIcon
-          name="i-lucide-plus"
-          class="pointer-events-none size-4"
+        <span
+          v-ripple
+          class="absolute inset-0 rounded-3xl"
         />
-        <span class="pointer-events-none">Tambah Alamat Baru</span>
+        <span class="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 pointer-events-none">
+          <UIcon
+            name="i-lucide-plus"
+            class="size-6"
+          />
+        </span>
+        <span class="relative z-10 min-w-0 flex-1 pointer-events-none">
+          <span class="block text-base font-bold">Tambah alamat baru</span>
+          <span class="block text-sm text-white/70">Rumah, kantor, atau alamat langganan</span>
+        </span>
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="relative z-10 size-5 shrink-0 text-white/70 pointer-events-none"
+        />
       </button>
-
-      <AlamatAddressForm
-        v-if="showForm"
-        :pending="saving"
-        @submit="addAddress"
-        @cancel="showForm = false"
-      />
     </AppPageContent>
+
+    <AppDialog
+      v-model:open="showForm"
+      :title="editing ? 'Ubah alamat' : 'Alamat baru'"
+      description="Lengkapi kecamatan supaya ongkir bisa dihitung dari alamat ini."
+      :ui="{ content: 'sm:max-w-lg', body: 'p-0 sm:p-0 max-lg:-mx-4 max-lg:-mb-4' }"
+    >
+      <template #body>
+        <AlamatAddressForm
+          :key="editing?.id ?? 'new'"
+          :address="editing"
+          :pending="saving"
+          @submit="saveAddress"
+          @cancel="showForm = false"
+        />
+      </template>
+    </AppDialog>
   </div>
 </template>

@@ -1,4 +1,4 @@
-import type { CourierBrand, CourierType, PartnerBadge } from '#shared/types'
+import type { CourierBrand, PartnerBadge } from '#shared/types'
 
 /**
  * Courier codes RajaOngkir V2 accepts on /calculate/domestic-cost. Sending a
@@ -10,6 +10,18 @@ export const SUPPORTED_COURIERS = [
 ] as const
 
 export type CourierCode = typeof SUPPORTED_COURIERS[number]
+
+/**
+ * The carriers this business actually ships with. Rates, order re-pricing,
+ * partner badges and waybill tracking are all restricted to these.
+ */
+export const ALLOWED_COURIERS = ['jnt', 'lion'] as const satisfies readonly CourierCode[]
+
+export type AllowedCourierCode = typeof ALLOWED_COURIERS[number]
+
+export function isAllowedCourier(code: string): code is AllowedCourierCode {
+  return (ALLOWED_COURIERS as readonly string[]).includes(code.toLowerCase())
+}
 
 interface CourierMeta {
   label: string
@@ -53,56 +65,21 @@ export function courierBrand(code: string): CourierBrand {
   }
 }
 
-export function courierLabel(code: string, apiName: string): string {
-  return COURIER_META[code.toLowerCase()]?.label ?? apiName
+/** Display name for a carrier code when there is no live RajaOngkir `name`. */
+export function courierLabel(code: string, fallback = code.toUpperCase()): string {
+  return COURIER_META[code.toLowerCase()]?.label ?? fallback
 }
 
-const TRUK = { label: 'Truk', icon: 'i-lucide-truck' }
-const MOTOR = { label: 'Motor', icon: 'i-lucide-bike' }
-const PESAWAT = { label: 'Pesawat', icon: 'i-lucide-plane' }
-
-/**
- * RajaOngkir has no speed field, so the tier is read off the service code and
- * description (e.g. SiCepat "SDS" or JNE "YES").
- */
-export function courierType(service: string, description: string): CourierType {
-  const haystack = `${service} ${description}`.toLowerCase()
-  if (/instant|inst|2 ?jam|3 ?jam/.test(haystack)) return 'instant'
-  if (/same ?day|\bsds\b|\bsd\b|\byes\b|esok/.test(haystack)) return 'sameday'
-  return 'regular'
-}
-
-export function courierVehicle(type: CourierType, service: string, description: string) {
-  if (type === 'instant') return MOTOR
-  const haystack = `${service} ${description}`.toLowerCase()
-  if (/udara|air|pesawat|\byes\b|\bsps\b|express/.test(haystack)) return PESAWAT
-  if (type === 'sameday') return MOTOR
-  return TRUK
-}
-
-export function courierPickup(type: CourierType): string {
-  return type === 'regular' ? 'Jemput besok' : 'Jemput hari ini'
-}
-
-/** Formats RajaOngkir's `etd` (e.g. "2-3 day", "", "1 day") for display. */
-export function courierEta(etd: string | null | undefined, type: CourierType): string {
+/** "2-3 day" → "2-3 hari"; an empty `etd` is said so rather than invented. */
+export function formatEtd(etd: string | null | undefined): string {
   const value = (etd ?? '').trim()
-  if (!value) return type === 'instant' ? '< 3 jam' : 'Estimasi menyusul'
+  if (!value || value === '-') return 'Estimasi belum tersedia'
   if (/jam|hour/i.test(value)) return value.replace(/hours?/i, 'jam')
-  const days = value.replace(/days?/i, '').trim()
-  return days ? `${days} hari` : value
+  return value.replace(/\s*days?/i, ' hari')
 }
 
 /** Carrier badges on the home screen, in display order. */
 export const PARTNER_BADGES: PartnerBadge[] = [
-  { label: 'JNE', courierCode: 'jne' },
-  { label: 'J&T', courierCode: 'jnt' },
-  { label: 'SiCepat', courierCode: 'sicepat' },
-  { label: 'Tiki', courierCode: 'tiki' },
-  { label: 'Pos', courierCode: 'pos' },
-  { label: 'Anteraja', courierCode: 'anteraja' },
-  { label: 'Lion', courierCode: 'lion' },
-  { label: 'Ninja', courierCode: 'ninja' },
-  { label: 'SPX', courierCode: 'spx' },
-  { label: 'ID Express', courierCode: 'ide' }
+  { label: 'J&T Express', courierCode: 'jnt' },
+  { label: 'Lion Parcel', courierCode: 'lion' }
 ]

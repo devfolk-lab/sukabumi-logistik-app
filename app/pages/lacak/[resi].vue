@@ -5,15 +5,26 @@ const route = useRoute()
 const nav = useAppNav()
 
 const resi = computed(() => normalizeResi(String(route.params.resi)))
+// Carried over from the search so an external waybill is not re-probed
+// against every carrier on every visit.
+const courier = computed(() => {
+  const value = String(route.query.courier ?? '').toLowerCase()
+  return isAllowedCourier(value) ? value : undefined
+})
 
 const request = useRequestFetch()
 
 const { data: shipment, status, error, refresh } = useAsyncData(
-  () => `shipment-${resi.value}`,
-  () => request<Shipment>(`/api/shipments/${resi.value}`)
+  () => `shipment-${resi.value}-${courier.value ?? 'auto'}`,
+  () => request<Shipment>(`/api/shipments/${resi.value}`, {
+    query: courier.value ? { courier: courier.value } : {}
+  }),
+  { lazy: true }
 )
 
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
+/** Booked here, so price, weight and contents are known. */
+const ownOrder = computed(() => Boolean(shipment.value?.orderId))
 </script>
 
 <template>
@@ -39,7 +50,7 @@ const loading = computed(() => status.value === 'pending' || status.value === 'i
             #{{ shipment?.resi ?? resi }}
           </h1>
           <p class="text-sm text-white/60">
-            Detail progress paket
+            {{ shipment?.courier ?? 'Detail progress paket' }}
           </p>
         </div>
       </div>
@@ -118,7 +129,10 @@ const loading = computed(() => status.value === 'pending' || status.value === 'i
               Lokasi Penjemputan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ shipment?.pickup.city }}, {{ shipment?.pickup.area }}
+              {{ shipment?.pickup.city }}
+            </p>
+            <p class="text-sm text-gray-500">
+              {{ shipment?.pickup.area }}
             </p>
           </div>
           <div class="min-w-0">
@@ -126,14 +140,20 @@ const loading = computed(() => status.value === 'pending' || status.value === 'i
               Lokasi Tujuan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ shipment?.delivery.city }}, {{ shipment?.delivery.area }}
+              {{ shipment?.delivery.city }}
+            </p>
+            <p class="text-sm text-gray-500">
+              {{ shipment?.delivery.area }}
             </p>
           </div>
         </div>
       </div>
 
-      <!-- Package details -->
-      <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
+      <!-- Package details: only known for shipments booked here -->
+      <div
+        v-if="ownOrder"
+        class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
+      >
         <p class="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">
           Detail Paket
         </p>
@@ -171,8 +191,34 @@ const loading = computed(() => status.value === 'pending' || status.value === 'i
             {{ shipment?.courier }}
           </p>
         </div>
-        <p class="shrink-0 text-xl font-extrabold text-primary">
-          {{ formatRupiah(shipment?.price ?? 0) }}
+        <p
+          v-if="shipment.price !== null"
+          class="shrink-0 text-xl font-extrabold text-primary"
+        >
+          {{ formatRupiah(shipment.price) }}
+        </p>
+        <UButton
+          v-else-if="shipment.orderId"
+          :to="`/riwayat/${shipment.orderId}`"
+          color="primary"
+          variant="soft"
+          size="lg"
+          class="shrink-0 font-bold"
+        >
+          Lihat Pesanan
+        </UButton>
+      </div>
+
+      <div
+        v-if="!ownOrder"
+        class="flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-3"
+      >
+        <UIcon
+          name="i-lucide-info"
+          class="mt-0.5 size-4 shrink-0 text-blue-600"
+        />
+        <p class="text-sm text-blue-800">
+          Paket ini tidak dipesan lewat Sukabumi Logistik. Data di atas diambil langsung dari kurir.
         </p>
       </div>
 

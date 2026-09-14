@@ -11,7 +11,8 @@ const request = useRequestFetch()
 
 const { data, status, error, refresh } = useAsyncData(
   () => `order-${id.value}`,
-  () => request<{ order: Order, shipment: Shipment }>(`/api/orders/${id.value}`)
+  () => request<{ order: Order, shipment: Shipment }>(`/api/orders/${id.value}`),
+  { lazy: true }
 )
 
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
@@ -41,6 +42,7 @@ async function pay() {
   try {
     await $fetch(`/api/orders/${id.value}/pay`, { method: 'POST' })
     await refresh()
+    await invalidateApiData(['orders', 'shipments', 'stats'])
     toast.add({ title: 'Pembayaran dikonfirmasi', description: 'Pesananmu sedang diproses.' })
   } catch (error) {
     toast.add({ title: 'Gagal memproses pembayaran', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
@@ -54,6 +56,7 @@ async function cancel() {
   try {
     await $fetch(`/api/orders/${id.value}/cancel`, { method: 'POST' })
     await refresh()
+    await invalidateApiData(['orders', 'shipments', 'stats'])
     toast.add({ title: 'Pesanan dibatalkan' })
   } catch (error) {
     toast.add({ title: 'Gagal membatalkan pesanan', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
@@ -168,7 +171,10 @@ async function cancel() {
               Lokasi Penjemputan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ order.pickup }}
+              {{ destinationTitle(destinationFromLabel(0, order.originLabel)) }}
+            </p>
+            <p class="text-sm text-gray-500">
+              {{ destinationSubtitle(destinationFromLabel(0, order.originLabel)) }}
             </p>
           </div>
           <div class="min-w-0">
@@ -176,7 +182,10 @@ async function cancel() {
               Lokasi Tujuan
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ order.delivery }}
+              {{ destinationTitle(destinationFromLabel(0, order.destinationLabel)) }}
+            </p>
+            <p class="text-sm text-gray-500">
+              {{ destinationSubtitle(destinationFromLabel(0, order.destinationLabel)) }}
             </p>
           </div>
         </div>
@@ -207,27 +216,55 @@ async function cancel() {
         </div>
       </div>
 
-      <div
-        v-if="order.awb"
-        class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
-      >
+      <!-- References: the carrier's numbers first, ours last -->
+      <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
         <p class="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">
-          Nomor Resi Kurir
+          Nomor Referensi
         </p>
-        <div class="flex items-center justify-between gap-3">
-          <p class="truncate text-base font-bold text-gray-800">
-            {{ order.awb }}
-          </p>
-          <UButton
-            :to="`/lacak/${shipment.resi}`"
-            color="primary"
-            variant="soft"
-            size="lg"
-            class="shrink-0 font-bold"
+        <dl class="divide-y divide-gray-100">
+          <div class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+            <div class="min-w-0">
+              <dt class="text-xs font-semibold text-gray-400">
+                Resi kurir ({{ courierLabel(order.courierCode) }})
+              </dt>
+              <dd
+                class="mt-0.5 truncate font-mono text-base font-bold"
+                :class="order.awb ? 'text-gray-800' : 'text-gray-400'"
+              >
+                {{ order.awb ?? 'Menunggu dari kurir' }}
+              </dd>
+            </div>
+            <UButton
+              v-if="order.awb"
+              :to="{ path: `/lacak/${order.awb}`, query: { courier: order.courierCode } }"
+              color="primary"
+              variant="soft"
+              size="lg"
+              class="shrink-0 font-bold"
+            >
+              Lacak
+            </UButton>
+          </div>
+          <div
+            v-if="order.komshipOrderNo"
+            class="py-2.5"
           >
-            Lacak
-          </UButton>
-        </div>
+            <dt class="text-xs font-semibold text-gray-400">
+              No. order RajaOngkir
+            </dt>
+            <dd class="mt-0.5 truncate font-mono text-base font-bold text-gray-800">
+              {{ order.komshipOrderNo }}
+            </dd>
+          </div>
+          <div class="py-2.5 last:pb-0">
+            <dt class="text-xs font-semibold text-gray-400">
+              No. pesanan internal
+            </dt>
+            <dd class="mt-0.5 font-mono text-sm font-semibold text-gray-500">
+              {{ order.orderNo }}
+            </dd>
+          </div>
+        </dl>
       </div>
 
       <!-- Courier + Price -->

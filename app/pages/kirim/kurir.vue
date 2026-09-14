@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Courier, CourierType } from '~/types'
+import type { Courier } from '~/types'
 import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
@@ -9,7 +9,7 @@ if (!booking.hasRoute) {
   await navigateTo('/kirim', { replace: true })
 }
 
-const filter = ref<CourierType | 'all'>('all')
+const filter = ref<'all' | AllowedCourierCode>('all')
 
 const request = useRequestFetch()
 
@@ -25,18 +25,22 @@ const { data: rates, status, error } = useAsyncData(
   }),
   {
     default: () => [],
+    // Never hold the route change for the quote; the skeleton covers it.
+    lazy: true,
     // Re-price whenever the route or weight changes.
     watch: [() => booking.origin?.id, () => booking.destination?.id, () => booking.weightGram]
   }
 )
 
 const couriers = computed(() =>
-  filter.value === 'all' ? rates.value : rates.value.filter(c => c.type === filter.value)
+  filter.value === 'all' ? rates.value : rates.value.filter(c => c.code === filter.value)
 )
 
 function select(courier: Courier) {
   booking.selectCourier(courier)
 }
+
+onMounted(() => preloadRouteComponents('/kirim/detail'))
 </script>
 
 <template>
@@ -63,7 +67,7 @@ function select(courier: Courier) {
               Pilih Kurir
             </h1>
             <p class="text-sm text-white/60">
-              Sukabumi Logistik — {{ rates.length }} layanan tersedia
+              Tarif langsung dari kurir untuk {{ booking.weight }} kg
             </p>
           </div>
         </div>
@@ -90,7 +94,7 @@ function select(courier: Courier) {
         <USkeleton
           v-for="n in 4"
           :key="n"
-          class="h-40 rounded-3xl"
+          class="h-36 rounded-3xl"
         />
       </div>
       <div

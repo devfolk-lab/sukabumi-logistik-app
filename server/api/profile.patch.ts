@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { User } from '#shared/types'
-import { requireProfile } from '../utils/auth'
+import { forgetProfile, requireProfile } from '../utils/auth'
 import { prisma } from '../utils/prisma'
 
 const body = z.object({
@@ -16,6 +16,8 @@ export default defineEventHandler(async (event): Promise<User> => {
     where: { id: profile.id },
     data: { nama: input.nama, telp: input.telp ?? null }
   })
+
+  forgetProfile(profile.id)
 
   return { nama: updated.nama, email: updated.email, telp: updated.telp }
 })

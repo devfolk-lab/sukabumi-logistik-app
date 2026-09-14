@@ -2,13 +2,6 @@
 import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
-
-const typeLabels: Record<string, string> = { regular: 'Reguler', instant: 'Instan', sameday: 'Same Day' }
-
-const typeLabel = computed(() => {
-  const type = booking.selectedCourier?.type
-  return type ? typeLabels[type] : ''
-})
 </script>
 
 <template>
@@ -29,7 +22,7 @@ const typeLabel = computed(() => {
             {{ booking.selectedCourier?.name }}
           </p>
           <p class="text-sm text-primary/70">
-            {{ typeLabel }} • {{ booking.selectedCourier?.eta }}
+            {{ booking.selectedCourier?.service }} • {{ formatEtd(booking.selectedCourier?.etd) }}
           </p>
         </div>
       </div>

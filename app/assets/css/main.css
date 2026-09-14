@@ -60,6 +60,28 @@ body {
   max-width: 100%;
 }
 
+/* Type scale per viewport. Every size and gap in the UI is rem-based, so
+   raising the root size on wide screens scales text and spacing together —
+   16px reads fine on a phone held close, but is small on a laptop or monitor
+   viewed at arm's length. */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (min-width: 1280px) {
+  html {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1920px) {
+  html {
+    font-size: 18px;
+  }
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }

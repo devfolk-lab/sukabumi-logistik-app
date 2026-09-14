@@ -21,8 +21,7 @@ const body = z.object({
   /** `${courierCode}:${serviceCode}` as returned by /api/couriers/rates. */
   courierId: z.string().trim().regex(/^[a-z0-9]+:.+$/i, 'Kurir tidak valid'),
   weightGram: z.number().int().min(100).max(150000),
-  content: z.string().trim().max(300).default(''),
-  insured: z.boolean().default(false)
+  content: z.string().trim().max(300).default('')
 })
 
 export default defineEventHandler(async (event): Promise<Order> => {
@@ -34,10 +33,10 @@ export default defineEventHandler(async (event): Promise<Order> => {
     origin: input.originId,
     destination: input.destinationId,
     weight: input.weightGram,
-    couriers: SUPPORTED_COURIERS
+    couriers: ALLOWED_COURIERS
   })
 
-  const rate = rates.find(r => `${r.code}:${r.service}` === input.courierId)
+  const rate = rates.find(r => isAllowedCourier(r.code) && `${r.code}:${r.service}` === input.courierId)
 
   if (!rate) {
     throw createError({
@@ -46,8 +45,6 @@ export default defineEventHandler(async (event): Promise<Order> => {
     })
   }
 
-  const type = courierType(rate.service, rate.description)
-  const insuranceFee = input.insured ? INSURANCE_FEE : 0
   const origin = splitDestination(input.originLabel)
   const destination = splitDestination(input.destinationLabel)
 
@@ -69,18 +66,16 @@ export default defineEventHandler(async (event): Promise<Order> => {
       destinationLabel: input.destinationLabel,
       destinationCity: destination.city,
       destinationArea: destination.area,
+      // RajaOngkir's own values, stored verbatim so the record matches the quote.
       courierCode: rate.code,
-      courierName: courierLabel(rate.code, rate.name),
+      courierName: rate.name,
       serviceCode: rate.service,
       serviceName: rate.description,
-      courierType: type.toUpperCase() as 'REGULAR' | 'SAMEDAY' | 'INSTANT',
-      etd: courierEta(rate.etd, type),
+      etd: rate.etd || null,
       weightGram: input.weightGram,
       content: input.content,
       shippingCost: rate.cost,
-      insuranceFee,
-      total: rate.cost + insuranceFee,
-      insured: input.insured
+      total: rate.cost
     }
   })
 

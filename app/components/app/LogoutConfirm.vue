@@ -28,7 +28,7 @@ async function confirm() {
 </script>
 
 <template>
-  <UModal
+  <AppDialog
     v-model:open="open"
     title="Keluar dari akun?"
     description="Kamu perlu masuk lagi untuk mengelola pengiriman."
@@ -60,5 +60,5 @@ async function confirm() {
         </UButton>
       </div>
     </template>
-  </UModal>
+  </AppDialog>
 </template>

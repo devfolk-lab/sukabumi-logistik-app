@@ -12,26 +12,19 @@ const { data: addresses } = useAddresses()
 // tap. Anything the user already typed wins. The data is fetched client-side,
 // so this runs once both requests have settled rather than on mount.
 watch([profile, addresses], () => {
-  const utama = addresses.value.find(a => a.main)
+  if (booking.sender.nama || booking.origin) return
 
-  if (utama && !booking.sender.nama) {
-    booking.sender = { nama: utama.nama, telp: utama.telp, alamat: utama.alamat }
-  } else if (profile.value && !booking.sender.nama) {
+  const utama = addresses.value.find(a => a.main && a.destinationId)
+
+  if (utama) {
+    booking.useAddress('sender', utama)
+  } else if (profile.value) {
     booking.sender = { nama: profile.value.nama, telp: profile.value.telp ?? '', alamat: '' }
   }
-
-  if (utama?.destinationId && !booking.origin) {
-    booking.origin = {
-      id: utama.destinationId,
-      label: utama.destinationLabel ?? '',
-      province: '',
-      city: (utama.destinationLabel ?? '').split(',')[2]?.trim() ?? '',
-      district: '',
-      subdistrict: (utama.destinationLabel ?? '').split(',')[0]?.trim() ?? '',
-      zipCode: utama.zipCode ?? ''
-    }
-  }
 }, { immediate: true })
+
+// The next step is a separate chunk; fetch it now so the button feels instant.
+onMounted(() => preloadRouteComponents('/kirim/kurir'))
 
 const kurang = computed(() => {
   if (!booking.hasRoute) return 'Pilih lokasi penjemputan dan tujuan dulu.'
@@ -79,7 +72,6 @@ async function next() {
 
     <AppPageContent class="mt-5 space-y-5 pb-32">
       <KirimPackageForm />
-      <KirimInstantToggle />
     </AppPageContent>
 
     <AppStickyBar>

@@ -7,10 +7,17 @@ const { data: profile, status, refresh: refreshProfile } = useProfile()
 
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
 
+/** Shows the inline "Tersimpan." next to the button for a moment. */
+function flash(flag: Ref<boolean>) {
+  flag.value = true
+  setTimeout(() => (flag.value = false), 2500)
+}
+
 // --- Data akun ---------------------------------------------------------------
 
 const form = reactive({ nama: '', telp: '' })
 const savingProfile = ref(false)
+const profileSaved = ref(false)
 
 // The form mirrors the loaded profile until the user edits it.
 watch(profile, (value) => {
@@ -36,6 +43,7 @@ async function saveProfile() {
       body: { nama: form.nama.trim(), telp: form.telp.trim() || null }
     })
     await refreshProfile()
+    flash(profileSaved)
     toast.add({ title: 'Profil diperbarui', color: 'success', icon: 'i-lucide-circle-check' })
   } catch (error) {
     toast.add({
@@ -53,6 +61,7 @@ async function saveProfile() {
 const pw = reactive({ current: '', next: '', confirm: '' })
 const showPassword = ref(false)
 const savingPassword = ref(false)
+const passwordSaved = ref(false)
 
 const passwordError = computed(() => {
   if (pw.next && pw.next.length < 8) return 'Password minimal 8 karakter'
@@ -79,6 +88,7 @@ async function savePassword() {
     pw.current = ''
     pw.next = ''
     pw.confirm = ''
+    flash(passwordSaved)
     toast.add({ title: 'Password diperbarui', color: 'success', icon: 'i-lucide-circle-check' })
   } catch (error) {
     toast.add({
@@ -144,159 +154,191 @@ async function savePassword() {
 
     <AppPageContent
       v-else
-      class="mt-5 grid gap-5 pb-10 lg:grid-cols-2 lg:items-start"
+      class="mt-5 pb-10"
     >
-      <!-- Data akun -->
-      <form
-        class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
-        @submit.prevent="saveProfile"
-      >
-        <div class="mb-5 flex items-center gap-2">
-          <div class="flex size-8 items-center justify-center rounded-xl bg-primary-50">
-            <UIcon
-              name="i-lucide-user"
-              class="size-4 text-primary"
-            />
-          </div>
-          <h2 class="text-base font-bold text-gray-800">
+      <!-- Jetstream-style sections: what the section is on the left, the
+           form on the right, and the action pinned to a footer bar. -->
+      <section class="md:grid md:grid-cols-3 md:gap-8">
+        <div class="md:col-span-1">
+          <h2 class="text-lg font-bold text-gray-800">
             Data Akun
           </h2>
+          <p class="mt-1 text-sm text-gray-500">
+            Nama dan nomor HP yang tampil di label pengiriman dan dipakai kurir untuk menghubungi kamu.
+          </p>
         </div>
+        <form
+          class="mt-4 overflow-hidden rounded-3xl bg-white shadow-card md:col-span-2 md:mt-0 lg:shadow-card-flat"
+          @submit.prevent="saveProfile"
+        >
+          <div class="space-y-5 p-5 sm:p-6">
+            <UFormField
+              label="Nama lengkap"
+              required
+            >
+              <UInput
+                v-model="form.nama"
+                type="text"
+                size="xl"
+                placeholder="Nama sesuai KTP"
+                icon="i-lucide-user"
+                autocomplete="name"
+                class="w-full"
+              />
+            </UFormField>
 
-        <div class="space-y-4">
-          <UFormField label="Nama Lengkap">
-            <UInput
-              v-model="form.nama"
-              type="text"
-              size="xl"
-              placeholder="Nama sesuai KTP"
-              icon="i-lucide-user"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="Email"
+              help="Email dipakai untuk masuk dan tidak bisa diubah."
+            >
+              <UInput
+                :model-value="profile.email"
+                type="email"
+                size="xl"
+                icon="i-lucide-mail"
+                class="w-full"
+                disabled
+              />
+            </UFormField>
 
-          <UFormField
-            label="Email"
-            help="Email dipakai untuk masuk dan tidak bisa diubah."
-          >
-            <UInput
-              :model-value="profile.email"
-              type="email"
-              size="xl"
-              icon="i-lucide-mail"
-              class="w-full"
-              disabled
-            />
-          </UFormField>
-
-          <UFormField label="No. HP">
-            <UInput
-              v-model="form.telp"
-              type="tel"
-              size="xl"
-              placeholder="08xx-xxxx-xxxx"
-              icon="i-lucide-phone"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UButton
-            v-ripple
-            type="submit"
-            size="xl"
-            block
-            class="font-bold"
-            :loading="savingProfile"
-            :disabled="!canSaveProfile"
-          >
-            Simpan Perubahan
-          </UButton>
-        </div>
-      </form>
-
-      <!-- Password: its own form so saving one never touches the other. -->
-      <form
-        class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
-        @submit.prevent="savePassword"
-      >
-        <div class="mb-5 flex items-center gap-2">
-          <div class="flex size-8 items-center justify-center rounded-xl bg-amber-50">
-            <UIcon
-              name="i-lucide-lock"
-              class="size-4 text-amber-600"
-            />
+            <UFormField label="Nomor HP">
+              <UInput
+                v-model="form.telp"
+                type="tel"
+                size="xl"
+                placeholder="08xx-xxxx-xxxx"
+                icon="i-lucide-phone"
+                autocomplete="tel"
+                inputmode="tel"
+                class="w-full"
+              />
+            </UFormField>
           </div>
-          <h2 class="text-base font-bold text-gray-800">
+          <div class="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 sm:px-6">
+            <Transition
+              enter-active-class="transition duration-200"
+              enter-from-class="opacity-0"
+              leave-active-class="transition duration-500"
+              leave-to-class="opacity-0"
+            >
+              <span
+                v-if="profileSaved"
+                class="text-sm font-semibold text-emerald-600"
+              >Tersimpan.</span>
+            </Transition>
+            <UButton
+              v-ripple
+              type="submit"
+              size="lg"
+              class="font-bold"
+              :loading="savingProfile"
+              :disabled="!canSaveProfile"
+            >
+              Simpan
+            </UButton>
+          </div>
+        </form>
+      </section>
+
+      <div class="my-8 border-t border-gray-200 md:my-10" />
+
+      <section class="md:grid md:grid-cols-3 md:gap-8">
+        <div class="md:col-span-1">
+          <h2 class="text-lg font-bold text-gray-800">
             Ganti Password
           </h2>
+          <p class="mt-1 text-sm text-gray-500">
+            Pakai password yang panjang dan tidak dipakai di akun lain agar akunmu tetap aman.
+          </p>
         </div>
-
-        <div class="space-y-4">
-          <UFormField label="Password Saat Ini">
-            <UInput
-              v-model="pw.current"
-              :type="showPassword ? 'text' : 'password'"
-              size="xl"
-              placeholder="Masukkan password saat ini"
-              icon="i-lucide-lock"
-              autocomplete="current-password"
-              class="w-full"
+        <!-- Its own form so saving one never touches the other. -->
+        <form
+          class="mt-4 overflow-hidden rounded-3xl bg-white shadow-card md:col-span-2 md:mt-0 lg:shadow-card-flat"
+          @submit.prevent="savePassword"
+        >
+          <div class="space-y-5 p-5 sm:p-6">
+            <UFormField
+              label="Password saat ini"
+              required
             >
-              <template #trailing>
-                <UButton
-                  color="neutral"
-                  variant="link"
-                  :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="showPassword ? 'Sembunyikan password' : 'Tampilkan password'"
-                  @click="showPassword = !showPassword"
-                />
-              </template>
-            </UInput>
-          </UFormField>
+              <UInput
+                v-model="pw.current"
+                :type="showPassword ? 'text' : 'password'"
+                size="xl"
+                placeholder="Masukkan password saat ini"
+                icon="i-lucide-lock"
+                autocomplete="current-password"
+                class="w-full"
+              >
+                <template #trailing>
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :aria-label="showPassword ? 'Sembunyikan password' : 'Tampilkan password'"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </UInput>
+            </UFormField>
 
-          <UFormField
-            label="Password Baru"
-            :error="passwordError"
-          >
-            <UInput
-              v-model="pw.next"
-              :type="showPassword ? 'text' : 'password'"
-              size="xl"
-              placeholder="Minimal 8 karakter"
-              icon="i-lucide-lock-keyhole"
-              autocomplete="new-password"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="Password baru"
+              :error="passwordError"
+              required
+            >
+              <UInput
+                v-model="pw.next"
+                :type="showPassword ? 'text' : 'password'"
+                size="xl"
+                placeholder="Minimal 8 karakter"
+                icon="i-lucide-lock-keyhole"
+                autocomplete="new-password"
+                class="w-full"
+              />
+            </UFormField>
 
-          <UFormField
-            label="Konfirmasi Password Baru"
-            :error="confirmError"
-          >
-            <UInput
-              v-model="pw.confirm"
-              :type="showPassword ? 'text' : 'password'"
-              size="xl"
-              placeholder="Ulangi password baru"
-              icon="i-lucide-lock-keyhole"
-              autocomplete="new-password"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UButton
-            v-ripple
-            type="submit"
-            size="xl"
-            block
-            class="font-bold"
-            :loading="savingPassword"
-            :disabled="!canSavePassword"
-          >
-            Ganti Password
-          </UButton>
-        </div>
-      </form>
+            <UFormField
+              label="Konfirmasi password baru"
+              :error="confirmError"
+              required
+            >
+              <UInput
+                v-model="pw.confirm"
+                :type="showPassword ? 'text' : 'password'"
+                size="xl"
+                placeholder="Ulangi password baru"
+                icon="i-lucide-lock-keyhole"
+                autocomplete="new-password"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <div class="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4 sm:px-6">
+            <Transition
+              enter-active-class="transition duration-200"
+              enter-from-class="opacity-0"
+              leave-active-class="transition duration-500"
+              leave-to-class="opacity-0"
+            >
+              <span
+                v-if="passwordSaved"
+                class="text-sm font-semibold text-emerald-600"
+              >Tersimpan.</span>
+            </Transition>
+            <UButton
+              v-ripple
+              type="submit"
+              size="lg"
+              class="font-bold"
+              :loading="savingPassword"
+              :disabled="!canSavePassword"
+            >
+              Ganti Password
+            </UButton>
+          </div>
+        </form>
+      </section>
     </AppPageContent>
   </div>
 </template>

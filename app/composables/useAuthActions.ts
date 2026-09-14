@@ -2,23 +2,34 @@
 export function useAuthActions() {
   const supabase = useSupabaseClient()
 
+  /**
+   * Cached API responses belong to one account, so they are dropped around
+   * every sign-in and sign-out. A successful sign-in immediately warms the
+   * cache with what the home screen needs so it renders without waiting.
+   */
   async function login(email: string, password: string) {
+    clearApiCache()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw new Error(error.message)
+    prefetchApiData()
   }
 
   async function register(input: { nama: string, email: string, telp: string, password: string }) {
-    const { error } = await supabase.auth.signUp({
+    clearApiCache()
+    const { data, error } = await supabase.auth.signUp({
       email: input.email,
       password: input.password,
       options: { data: { nama: input.nama, telp: input.telp } }
     })
     if (error) throw new Error(error.message)
+    // With email confirmation on there is no session yet, so nothing to warm.
+    if (data.session) prefetchApiData()
   }
 
   async function logout() {
     const { error } = await supabase.auth.signOut()
     if (error) throw new Error(error.message)
+    clearApiCache()
   }
 
   /**

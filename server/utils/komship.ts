@@ -23,7 +23,6 @@ export interface StoreOrderInput {
   courierCode: string
   serviceCode: string
   shippingCost: number
-  insuranceValue: number
   total: number
   weightGram: number
   content: string
@@ -69,8 +68,8 @@ const KOMSHIP_CARRIER: Record<string, string> = {
 
 /**
  * Komship rejects a tariff lookup with `item_value` of 0. The value only feeds
- * their insurance quoting, which this app does not buy - it charges its own
- * flat premium - so a nominal declared value is enough to get the rate list.
+ * their COD and insurance maths, neither of which this app uses, so a nominal
+ * declared value is enough to get the rate list.
  */
 const NOMINAL_ITEM_VALUE = 100000
 
@@ -163,7 +162,7 @@ export async function storeOrder(input: StoreOrderInput): Promise<StoreOrderResu
 
   // Komship bills its own tariff, which differs from the RajaOngkir quote the
   // customer saw. Their record uses their numbers; our order keeps the quote.
-  const grandTotal = service.shipping_cost + input.insuranceValue
+  const grandTotal = service.shipping_cost
 
   const res = await client()<Envelope<{ order_id: number | string, order_no: string }>>(
     '/order/api/v1/orders/store',
@@ -190,7 +189,7 @@ export async function storeOrder(input: StoreOrderInput): Promise<StoreOrderResu
         additional_cost: 0,
         grand_total: grandTotal,
         cod_value: 0,
-        insurance_value: input.insuranceValue,
+        insurance_value: 0,
         notes: input.orderNo,
         order_details: [
           {

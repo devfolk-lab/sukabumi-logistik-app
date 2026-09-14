@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Courier } from '~/types'
 
-const props = defineProps<{
+defineProps<{
   courier: Courier
   selected: boolean
 }>()
@@ -9,14 +9,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [courier: Courier]
 }>()
-
-const typeMeta: Record<Courier['type'], { label: string, icon: string, color: 'info' | 'warning', extraClass?: string }> = {
-  regular: { label: 'Reguler', icon: 'i-lucide-truck', color: 'info' },
-  instant: { label: 'Instan', icon: 'i-lucide-zap', color: 'warning' },
-  sameday: { label: 'Same Day', icon: 'i-lucide-clock', color: 'info', extraClass: 'bg-sky-50 text-sky-700' }
-}
-
-const meta = computed(() => typeMeta[props.courier.type])
 </script>
 
 <template>
@@ -41,18 +33,16 @@ const meta = computed(() => typeMeta[props.courier.type])
                 {{ courier.name }}
               </h4>
               <p class="mt-0.5 truncate text-sm text-gray-500">
-                {{ courier.serviceName }}
+                {{ courier.description }}
               </p>
             </div>
             <UBadge
-              :color="meta.color"
+              color="neutral"
               variant="soft"
-              :icon="meta.icon"
-              :class="meta.extraClass"
-              class="shrink-0 rounded-full uppercase"
+              class="shrink-0 rounded-full font-mono"
               size="sm"
             >
-              {{ meta.label }}
+              {{ courier.service }}
             </UBadge>
           </div>
           <div class="mt-2.5 flex flex-wrap items-center gap-2">
@@ -60,47 +50,23 @@ const meta = computed(() => typeMeta[props.courier.type])
               <UIcon
                 name="i-lucide-clock"
                 class="size-3.5"
-              /> {{ courier.eta }}
-            </span>
-            <span class="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-1 text-sm font-semibold text-gray-600">
-              <UIcon
-                name="i-lucide-calendar"
-                class="size-3.5"
-              /> {{ courier.pickup }}
-            </span>
-            <span
-              v-if="courier.insured"
-              class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-sm font-semibold text-emerald-700"
-            >
-              <UIcon
-                name="i-lucide-shield"
-                class="size-3.5"
-              /> Asuransi
+              /> {{ formatEtd(courier.etd) }}
             </span>
           </div>
         </div>
       </div>
     </div>
     <div class="flex items-center justify-between gap-2 border-t border-gray-100 bg-gray-50 px-4 py-3">
-      <UBadge
-        color="primary"
-        variant="soft"
-        :icon="courier.vehicle.icon"
+      <p class="text-xl leading-none font-extrabold text-primary">
+        {{ formatRupiah(courier.cost) }}
+      </p>
+      <UButton
+        :color="selected ? 'success' : 'primary'"
+        size="lg"
+        class="pointer-events-none font-bold"
       >
-        {{ courier.vehicle.label }}
-      </UBadge>
-      <div class="flex shrink-0 items-center gap-3">
-        <p class="text-xl leading-none font-extrabold text-primary">
-          {{ formatRupiah(courier.price) }}
-        </p>
-        <UButton
-          :color="selected ? 'success' : 'primary'"
-          size="lg"
-          class="pointer-events-none font-bold"
-        >
-          {{ selected ? 'Terpilih' : 'Pilih' }}
-        </UButton>
-      </div>
+        {{ selected ? 'Terpilih' : 'Pilih' }}
+      </UButton>
     </div>
   </div>
 </template>

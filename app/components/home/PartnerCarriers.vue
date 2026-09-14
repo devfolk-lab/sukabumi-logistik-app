@@ -4,7 +4,7 @@
       Mitra Pengiriman
     </h2>
     <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
-      <div class="grid grid-cols-5 gap-x-2 gap-y-5 lg:grid-cols-10">
+      <div class="flex flex-wrap justify-center gap-x-8 gap-y-5">
         <NuxtLink
           v-for="partner in PARTNER_BADGES"
           :key="partner.courierCode"

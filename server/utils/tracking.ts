@@ -2,12 +2,7 @@ import type { Order, TrackingEvent } from '../generated/prisma/client'
 import { prisma } from './prisma'
 import { trackWaybill } from './rajaongkir'
 import { orderDetail } from './komship'
-
-/** RajaOngkir manifests carry date and time as separate strings. */
-function manifestDate(date: string, time: string): Date {
-  const parsed = new Date(`${date} ${time || '00:00'}`)
-  return Number.isNaN(parsed.getTime()) ? new Date(date) : parsed
-}
+import { manifestDate } from './mappers'
 
 /**
  * Pulls the live manifest for an order's AWB and caches it. Tracking is a

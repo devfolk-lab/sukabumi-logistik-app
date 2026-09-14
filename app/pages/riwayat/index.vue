@@ -38,7 +38,7 @@ const filtered = computed(() =>
     <AppPageContent class="mt-2 mb-6">
       <div
         v-if="status === 'pending' || status === 'idle'"
-        class="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-5"
+        class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton
           v-for="n in 3"
@@ -48,7 +48,7 @@ const filtered = computed(() =>
       </div>
       <div
         v-else-if="filtered.length"
-        class="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-5"
+        class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <RiwayatCard
           v-for="order in filtered"

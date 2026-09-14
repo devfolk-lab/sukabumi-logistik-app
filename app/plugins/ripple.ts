@@ -3,6 +3,13 @@ import { rippleGeometry } from '~/utils/ripple'
 
 type RippleElement = HTMLElement & { __rippleDark?: boolean }
 
+/**
+ * A touch tap lasts ~50-80ms, shorter than the ink's fade-in, so releasing
+ * on `pointerup` alone made the ripple invisible on phones. The fade-out is
+ * held back until the ink has been on screen at least this long.
+ */
+const MIN_PRESS_MS = 250
+
 function spawn(el: HTMLElement, event: PointerEvent, dark: boolean): void {
   const { size, left, top } = rippleGeometry(el.getBoundingClientRect(), event.clientX, event.clientY)
 
@@ -15,16 +22,30 @@ function spawn(el: HTMLElement, event: PointerEvent, dark: boolean): void {
   circle.style.background = dark ? 'rgba(0, 33, 68, 0.12)' : 'rgba(255, 255, 255, 0.45)'
   el.appendChild(circle)
 
-  requestAnimationFrame(() => circle.classList.add('grow'))
+  // Force a layout so the `grow` transition starts from the initial state
+  // this frame instead of waiting for the next animation frame.
+  void circle.offsetWidth
+  circle.classList.add('grow')
 
+  const pressedAt = performance.now()
   let released = false
-  const release = () => {
-    if (released) return
-    released = true
+
+  const fade = () => {
     circle.classList.add('release')
     circle.addEventListener('transitionend', () => circle.remove(), { once: true })
     setTimeout(() => circle.remove(), 500)
+  }
+
+  const release = () => {
+    if (released) return
+    released = true
     el.removeEventListener('pointerleave', release)
+    document.removeEventListener('pointerup', release)
+    document.removeEventListener('pointercancel', release)
+
+    const remaining = MIN_PRESS_MS - (performance.now() - pressedAt)
+    if (remaining > 0) setTimeout(fade, remaining)
+    else fade()
   }
 
   document.addEventListener('pointerup', release, { once: true })
