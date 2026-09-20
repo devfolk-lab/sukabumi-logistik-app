@@ -14,8 +14,21 @@ const courier = computed(() => booking.selectedCourier)
 
 const pending = ref(false)
 
+// Creating an order calls RajaOngkir/Komship and books a real shipment at the
+// quoted tariff, so it is never queued — it waits for a live connection.
+const online = useOnline()
+
 async function checkout() {
   if (pending.value) return
+
+  if (!online.value) {
+    toast.add({
+      title: 'Butuh koneksi internet',
+      description: 'Pembuatan pesanan memerlukan koneksi aktif.',
+      color: 'warning'
+    })
+    return
+  }
 
   if (!booking.hasParties) {
     toast.add({
@@ -345,7 +358,8 @@ async function checkout() {
       <button
         type="button"
         class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
-        :disabled="pending"
+        :disabled="pending || !online"
+        :title="!online ? 'Butuh koneksi internet' : undefined"
         @click="checkout"
       >
         <span
@@ -353,7 +367,7 @@ async function checkout() {
           class="absolute inset-0 rounded-2xl"
         />
         <span class="relative z-10 pointer-events-none">
-          {{ pending ? 'Memproses...' : `Bayar ${formatRupiah(booking.total)}` }}
+          {{ !online ? 'Butuh koneksi internet' : pending ? 'Memproses...' : `Bayar ${formatRupiah(booking.total)}` }}
         </span>
       </button>
     </AppStickyBar>

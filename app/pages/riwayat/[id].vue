@@ -37,7 +37,21 @@ const stepsCompleted = computed(() => {
 
 const pending = ref(false)
 
+// Both of these move real order state, so neither is ever queued offline.
+const online = useOnline()
+
+function requireConnection(): boolean {
+  if (online.value) return true
+  toast.add({
+    title: 'Butuh koneksi internet',
+    description: 'Tindakan ini memerlukan koneksi aktif.',
+    color: 'warning'
+  })
+  return false
+}
+
 async function pay() {
+  if (!requireConnection()) return
   pending.value = true
   try {
     await $fetch(`/api/orders/${id.value}/pay`, { method: 'POST' })
@@ -52,6 +66,7 @@ async function pay() {
 }
 
 async function cancel() {
+  if (!requireConnection()) return
   pending.value = true
   try {
     await $fetch(`/api/orders/${id.value}/cancel`, { method: 'POST' })
@@ -295,7 +310,8 @@ async function cancel() {
         <button
           type="button"
           class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
-          :disabled="pending"
+          :disabled="pending || (belumBayar && !online)"
+          :title="belumBayar && !online ? 'Butuh koneksi internet' : undefined"
           @click="belumBayar ? pay() : navigateTo('/kirim')"
         >
           <span
@@ -303,7 +319,8 @@ async function cancel() {
             class="absolute inset-0 rounded-2xl"
           />
           <span class="relative z-10 pointer-events-none">
-            {{ belumBayar ? 'Lanjutkan Bayar' : 'Pesan Lagi' }}
+            <!-- "Pesan Lagi" only navigates, so it stays usable offline. -->
+            {{ belumBayar ? (online ? 'Lanjutkan Bayar' : 'Butuh koneksi internet') : 'Pesan Lagi' }}
           </span>
         </button>
         <button
@@ -311,10 +328,11 @@ async function cancel() {
           v-ripple.dark
           type="button"
           class="w-full rounded-2xl border-2 border-red-100 bg-white py-3 text-base font-bold text-red-500 disabled:opacity-60"
-          :disabled="pending"
+          :disabled="pending || !online"
+          :title="!online ? 'Butuh koneksi internet' : undefined"
           @click="cancel"
         >
-          Batalkan Pesanan
+          {{ online ? 'Batalkan Pesanan' : 'Butuh koneksi internet' }}
         </button>
       </div>
     </AppStickyBar>
