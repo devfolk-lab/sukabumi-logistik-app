@@ -36,7 +36,7 @@ export default defineEventHandler(async (event): Promise<Order> => {
     couriers: ALLOWED_COURIERS
   })
 
-  const rate = rates.find(r => isAllowedCourier(r.code) && `${r.code}:${r.service}` === input.courierId)
+  const rate = rates.find(r => isAllowedService(r.code, r.service) && `${r.code}:${r.service}` === input.courierId)
 
   if (!rate) {
     throw createError({
