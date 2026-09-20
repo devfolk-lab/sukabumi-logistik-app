@@ -189,6 +189,13 @@ Wiring:
 own `$fetch`, not a keyed endpoint, so it does not fit this contract. Its
 freshness comes from the service worker's `NetworkFirst` rule.
 
+**Amended during planning:** `riwayat/[id].vue` also fetches outside the keyed
+endpoints — its own `useAsyncData('order-<id>')` at `riwayat/[id].vue:14` — so
+`refreshKeys: ['orders']` alone would refresh the list behind it and leave the
+visible detail stale. It instead registers its own handler through
+`registerPageRefresh()`, which refreshes the order and then invalidates
+`orders`, `shipments` and `stats`. `lacak/[resi].vue` still gets no gesture.
+
 A pull while online also drains the outbox. A pull while offline skips the
 requests and toasts *"Tidak ada koneksi"*.
 
