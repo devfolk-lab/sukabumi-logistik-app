@@ -7,6 +7,14 @@ const toast = useToast()
 
 const { data: addresses, status, refresh } = useAddresses()
 
+const online = useOnline()
+const { enqueue } = useOutbox()
+
+/** A row that exists only on this device until its POST replays. */
+function isPending(address: Address): boolean {
+  return address.id.startsWith('tmp-')
+}
+
 const showForm = ref(false)
 const saving = ref(false)
 
@@ -25,16 +33,58 @@ function openEdit(id: string) {
 
 async function saveAddress(payload: AddressFormPayload) {
   saving.value = true
+  const target = editing.value
 
   try {
-    if (editing.value) {
-      await $fetch(`/api/addresses/${editing.value.id}`, { method: 'PATCH', body: payload })
+    if (online.value) {
+      if (target) {
+        await $fetch(`/api/addresses/${target.id}`, { method: 'PATCH', body: payload })
+      } else {
+        await $fetch('/api/addresses', { method: 'POST', body: payload })
+      }
+      await refresh()
+    } else if (target) {
+      // Show the edit straight away; the PATCH replays once there is a network.
+      writeApiCache('addresses', addresses.value.map(a => (a.id === target.id ? { ...a, ...payload } : a)))
+      await enqueue({
+        method: 'PATCH',
+        url: `/api/addresses/${target.id}`,
+        body: { ...payload },
+        invalidates: ['addresses'],
+        label: 'alamat'
+      })
     } else {
-      await $fetch('/api/addresses', { method: 'POST', body: payload })
+      // `tmpId` travels in the body so the drain can map it to the real id the
+      // server assigns, and repoint any edit queued behind it.
+      const tmpId = `tmp-${crypto.randomUUID()}`
+      const draft: Address = {
+        id: tmpId,
+        label: payload.label,
+        main: addresses.value.length === 0,
+        nama: payload.nama,
+        telp: payload.telp,
+        alamat: payload.alamat,
+        destinationId: payload.destinationId,
+        destinationLabel: payload.destinationLabel,
+        zipCode: payload.zipCode
+      }
+      writeApiCache('addresses', [...addresses.value, draft])
+      await enqueue({
+        method: 'POST',
+        url: '/api/addresses',
+        body: { ...payload, tmpId },
+        invalidates: ['addresses'],
+        label: 'alamat'
+      })
     }
-    await refresh()
+
     showForm.value = false
-    toast.add({ title: editing.value ? 'Alamat diperbarui' : 'Alamat tersimpan' })
+    toast.add({
+      title: online.value
+        ? (target ? 'Alamat diperbarui' : 'Alamat tersimpan')
+        : 'Tersimpan offline',
+      description: online.value ? undefined : 'Akan disinkronkan setelah kembali online.'
+    })
   } catch (error) {
     toast.add({
       title: 'Gagal menyimpan alamat',
@@ -48,8 +98,20 @@ async function saveAddress(payload: AddressFormPayload) {
 
 async function removeAddress(id: string) {
   try {
-    await $fetch(`/api/addresses/${id}`, { method: 'DELETE' })
-    await refresh()
+    if (online.value) {
+      await $fetch(`/api/addresses/${id}`, { method: 'DELETE' })
+      await refresh()
+      return
+    }
+
+    writeApiCache('addresses', addresses.value.filter(a => a.id !== id))
+    await enqueue({
+      method: 'DELETE',
+      url: `/api/addresses/${id}`,
+      invalidates: ['addresses'],
+      label: 'alamat'
+    })
+    toast.add({ title: 'Dihapus offline', description: 'Akan disinkronkan setelah kembali online.' })
   } catch (error) {
     toast.add({
       title: 'Gagal menghapus alamat',
@@ -61,8 +123,20 @@ async function removeAddress(id: string) {
 
 async function setMain(id: string) {
   try {
-    await $fetch(`/api/addresses/${id}`, { method: 'PATCH', body: { main: true } })
-    await refresh()
+    if (online.value) {
+      await $fetch(`/api/addresses/${id}`, { method: 'PATCH', body: { main: true } })
+      await refresh()
+      return
+    }
+
+    writeApiCache('addresses', addresses.value.map(a => ({ ...a, main: a.id === id })))
+    await enqueue({
+      method: 'PATCH',
+      url: `/api/addresses/${id}`,
+      body: { main: true },
+      invalidates: ['addresses'],
+      label: 'alamat utama'
+    })
   } catch (error) {
     toast.add({
       title: 'Gagal mengubah alamat utama',
@@ -121,6 +195,7 @@ async function setMain(id: string) {
           v-for="address in addresses"
           :key="address.id"
           :address="address"
+          :pending="isPending(address)"
           @edit="openEdit"
           @remove="removeAddress"
           @set-main="setMain"

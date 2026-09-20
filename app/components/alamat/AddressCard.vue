@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Address } from '~/types'
 
-defineProps<{ address: Address }>()
+defineProps<{ address: Address, pending?: boolean }>()
 
 const emit = defineEmits<{
   edit: [id: string]
@@ -28,6 +28,15 @@ const emit = defineEmits<{
           class="rounded-full"
         >
           Utama
+        </UBadge>
+        <UBadge
+          v-if="pending"
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-cloud-off"
+          class="rounded-full"
+        >
+          Menunggu sinkron
         </UBadge>
       </div>
       <div class="flex shrink-0 items-center gap-1">

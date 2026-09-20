@@ -7,6 +7,9 @@ const { data: profile, status, refresh: refreshProfile } = useProfile()
 
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
 
+const online = useOnline()
+const { enqueue } = useOutbox()
+
 // --- Pasang aplikasi ---------------------------------------------------------
 
 const { $pwa } = useNuxtApp()
@@ -60,13 +63,29 @@ async function saveProfile() {
   savingProfile.value = true
 
   try {
-    await $fetch('/api/profile', {
-      method: 'PATCH',
-      body: { nama: form.nama.trim(), telp: form.telp.trim() || null }
-    })
-    await refreshProfile()
-    flash(profileSaved)
-    toast.add({ title: 'Profil diperbarui', color: 'success', icon: 'i-lucide-circle-check' })
+    const body = { nama: form.nama.trim(), telp: form.telp.trim() || null }
+
+    if (online.value) {
+      await $fetch('/api/profile', { method: 'PATCH', body })
+      await refreshProfile()
+      flash(profileSaved)
+      toast.add({ title: 'Profil diperbarui', color: 'success', icon: 'i-lucide-circle-check' })
+    } else {
+      if (profile.value) writeApiCache('profile', { ...profile.value, ...body })
+      await enqueue({
+        method: 'PATCH',
+        url: '/api/profile',
+        body,
+        invalidates: ['profile'],
+        label: 'profil'
+      })
+      flash(profileSaved)
+      toast.add({
+        title: 'Tersimpan offline',
+        description: 'Akan disinkronkan setelah kembali online.',
+        icon: 'i-lucide-cloud-off'
+      })
+    }
   } catch (error) {
     toast.add({
       title: 'Gagal memperbarui profil',
