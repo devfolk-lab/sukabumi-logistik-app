@@ -43,7 +43,7 @@ Nuxt 4 SSR app in three layers: `app/` (UI), `server/` (Nitro API and integratio
 
 - `server/utils/prisma.ts` — the Prisma singleton. Supabase's Postgres certificate is signed by a private CA (pinned in `server/utils/supabase-ca.ts`), and node-postgres lets a connection-string `sslmode` override an explicit `ssl` object, so the URL's `sslmode` is stripped before the adapter sees it.
 - `server/utils/auth.ts` — `requireProfile(event)` guards every user-scoped route. `serverSupabaseUser()` returns decoded JWT *claims*, not a `User`: the id is `sub`, and claims carry an index signature, so `.id` typechecks and is silently undefined.
-- `server/utils/rajaongkir.ts` — RajaOngkir API V2. The product is called V2 but the path is `/api/v1`; there is no `/api/v2`. Errors arrive in the response envelope as well as in the status code. `/api/couriers/rates` passes RajaOngkir's `name/service/description/cost/etd` through verbatim (only `id` and `brand` are ours) and is restricted to `ALLOWED_COURIERS` (`shared/utils/courier.ts`, currently J&T and Lion Parcel) — the cost API quotes no insurance and no cashback, so the UI carries neither.
+- `server/utils/rajaongkir.ts` — RajaOngkir API V2. The product is called V2 but the path is `/api/v1`; there is no `/api/v2`. Errors arrive in the response envelope as well as in the status code. `/api/couriers/rates` passes RajaOngkir's `name/service/description/cost/etd` through verbatim (only `id` and `brand` are ours) and is restricted to `ALLOWED_COURIERS` (`shared/utils/courier.ts`, currently Lion Parcel only) — the cost API quotes no insurance and no cashback, so the UI carries neither.
 - `server/api/shipments/[resi].get.ts` — looks up our own orders by AWB, Komship order number or internal number, and otherwise tracks the waybill straight from RajaOngkir, trying each allowed carrier when no `courier` query is given. The Komship handoff runs against the **sandbox**, so the AWBs it returns are not known to real carriers until a production key exists.
 - `server/utils/destinations.ts` — local destination index. RajaOngkir's hosted search only matches whole words (`cibad` → nothing, `cibadak` → results), so `/api/destinations` searches `server/assets/destinations.tsv.gz` — built by `pnpm build:destinations` (`scripts/build-destinations.ts`, ~7,500 paced requests, resumable via `scripts/.cache/`) — and only falls back to the hosted search when the snapshot is missing.
 - `server/utils/komship.ts` — the carrier handoff. Komship's carrier catalog and tariffs are **separate** from the RajaOngkir cost API's, so a quoted service must be re-resolved via `resolveKomshipService()` or the store call fails with "expedition not found".
@@ -69,7 +69,17 @@ Every clickable surface carries `v-ripple` (light ink) or `v-ripple.dark`; pass 
 
 ### Modules
 
-`@nuxt/eslint`, `@nuxt/ui`, `@vueuse/nuxt` (VueUse composables auto-imported), `@vite-pwa/nuxt` (PWA; currently no `pwa` options block in `nuxt.config.ts`), `@pinia/nuxt`, `@nuxtjs/supabase`.
+`@nuxt/eslint`, `@nuxt/ui`, `@vueuse/nuxt` (VueUse composables auto-imported), `@vite-pwa/nuxt`, `@pinia/nuxt`, `@nuxtjs/supabase`.
+
+### PWA and offline
+
+Offline support is split between two caches that never overlap. The service worker (Workbox `generateSW`, `registerType: 'prompt'`) owns the shell, the courier logos and the two *unkeyed* GETs — `/api/shipments/*` (`NetworkFirst`) and `/api/destinations*` (`CacheFirst`). IndexedDB (`app/utils/offline-db.ts`) owns the five `useApi` keys and the mutation outbox, so the UI can state how old a cached screen is.
+
+Two build-order facts are load-bearing. With `ssr: false` the shell is rendered per request and never written to disk, so `nitro.prerender.routes: ['/']` emits one; and because the service worker is generated *before* Nitro prerenders, `html` is kept out of `globPatterns` and `/` is precached through `additionalManifestEntries` instead — globbing it would pick up the previous build's `index.html` and collide. PWA head tags live in `app.head`, not `app.vue`, because a `useHead` call only runs after hydration and never reaches the prerendered document.
+
+`app/plugins/offline.client.ts` seeds the payload from IndexedDB before the first page mounts, then drains the outbox on boot and on reconnect. Writes made offline are queued for alamat and profil only; anything touching an order (buat pesanan, bayar, batalkan) requires a live connection, because replaying a quote into RajaOngkir/Komship would book a real shipment at a stale tariff. A 4xx on replay drops the entry, a 5xx retries up to five times.
+
+Pull-to-refresh (`AppPullToRefresh`, mounted in `layouts/default.vue`) is declared per page via `definePageMeta({ refreshKeys })`; a page that declares none has no gesture. Pages fetching outside the keyed endpoints use `registerPageRefresh()` instead — `riwayat/[id]` does. `overscroll-behavior-y: contain` in `main.css` is what stops Android Chrome running its own pull-to-refresh alongside it.
 
 The app is client-rendered (`ssr: false`): every route is user-scoped and there is nothing to index. `app/spa-loading-template.html` is the branded splash the server ships before hydration, and `<NuxtLoadingIndicator>` in `app.vue` covers route changes. `@nuxtjs/supabase` `redirectOptions` sends unauthenticated users to `/login`; the auth pages are in its `exclude` list.
 
