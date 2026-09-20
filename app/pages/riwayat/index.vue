@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { OrderStatus } from '~/types'
 
+definePageMeta({ refreshKeys: ['orders'] })
+
 const { data: orders, status } = useOrders()
 
 const filter = ref<OrderStatus | 'all'>('all')

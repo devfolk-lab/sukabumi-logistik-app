@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Shipment } from '~/types'
 
+definePageMeta({ refreshKeys: ['shipments'] })
+
 const nav = useAppNav()
 const { data: shipments, status } = useActiveShipments()
 

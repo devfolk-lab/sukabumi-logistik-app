@@ -15,6 +15,13 @@ const { data, status, error, refresh } = useAsyncData(
   { lazy: true }
 )
 
+// This page's data is `order-<id>`, not a `useApi` key, so it refreshes itself
+// and then syncs the lists the same change would affect.
+registerPageRefresh(async () => {
+  await refresh()
+  await invalidateApiData(['orders', 'shipments', 'stats'])
+})
+
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
 const order = computed(() => data.value?.order)
 const shipment = computed(() => data.value?.shipment)

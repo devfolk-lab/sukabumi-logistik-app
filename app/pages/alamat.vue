@@ -2,6 +2,8 @@
 import type { Address } from '~/types'
 import type { AddressFormPayload } from '~/components/alamat/AddressForm.vue'
 
+definePageMeta({ refreshKeys: ['addresses'] })
+
 const nav = useAppNav()
 const toast = useToast()
 

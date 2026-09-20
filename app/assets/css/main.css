@@ -58,6 +58,9 @@ html,
 body {
   overflow-x: hidden;
   max-width: 100%;
+  /* Without this, Android Chrome runs its own pull-to-refresh alongside
+     AppPullToRefresh — two spinners and a full page reload. */
+  overscroll-behavior-y: contain;
 }
 
 /* Type scale per viewport. Every size and gap in the UI is rem-based, so

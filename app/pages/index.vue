@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ refreshKeys: ['profile', 'shipments', 'orders', 'stats'] })
+
 const { data: profile } = useProfile()
 const { data: shipments, status } = useActiveShipments()
 const { data: orders, status: ordersStatus } = useOrders()
