@@ -15,32 +15,12 @@ export type CourierCode = typeof SUPPORTED_COURIERS[number]
  * The carriers this business actually ships with. Rates, order re-pricing,
  * partner badges and waybill tracking are all restricted to these.
  */
-export const ALLOWED_COURIERS = ['jne', 'lion'] as const satisfies readonly CourierCode[]
+export const ALLOWED_COURIERS = ['lion'] as const satisfies readonly CourierCode[]
 
 export type AllowedCourierCode = typeof ALLOWED_COURIERS[number]
 
 export function isAllowedCourier(code: string): code is AllowedCourierCode {
   return (ALLOWED_COURIERS as readonly string[]).includes(code.toLowerCase())
-}
-
-/**
- * Which of a carrier's services this business actually sells. JNE quotes its
- * regular parcel services (REG, YES, OKE, CTC…) alongside trucking, but only
- * JNE Trucking is offered here — so everything that is not JTR is dropped from
- * quotes and refused at order time. The weight-banded variants RajaOngkir
- * returns (`JTR<150`, `JTR250`, `JTR>250`) are all trucking, hence the prefix
- * match rather than an exact one.
- *
- * A carrier absent from this map sells every service it quotes.
- */
-const ALLOWED_SERVICES: Partial<Record<AllowedCourierCode, (service: string) => boolean>> = {
-  jne: service => service.toUpperCase().startsWith('JTR')
-}
-
-export function isAllowedService(code: string, service: string): boolean {
-  if (!isAllowedCourier(code)) return false
-  const allows = ALLOWED_SERVICES[code.toLowerCase() as AllowedCourierCode]
-  return allows ? allows(service) : true
 }
 
 interface CourierMeta {
@@ -100,6 +80,5 @@ export function formatEtd(etd: string | null | undefined): string {
 
 /** Carrier badges on the home screen, in display order. */
 export const PARTNER_BADGES: PartnerBadge[] = [
-  { label: 'JNE Trucking', courierCode: 'jne' },
   { label: 'Lion Parcel', courierCode: 'lion' }
 ]

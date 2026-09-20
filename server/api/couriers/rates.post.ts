@@ -24,7 +24,7 @@ export default defineEventHandler(async (event): Promise<Courier[]> => {
   })
 
   return rates
-    .filter(rate => isAllowedService(rate.code, rate.service))
+    .filter(rate => isAllowedCourier(rate.code))
     .map(rate => ({
       id: `${rate.code}:${rate.service}`,
       code: rate.code,
