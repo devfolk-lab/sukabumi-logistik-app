@@ -7,6 +7,28 @@ const { data: profile, status, refresh: refreshProfile } = useProfile()
 
 const loading = computed(() => status.value === 'pending' || status.value === 'idle')
 
+// --- Pasang aplikasi ---------------------------------------------------------
+
+const { $pwa } = useNuxtApp()
+
+// iOS has no `beforeinstallprompt`, so Safari users get instructions rather
+// than a button that could never do anything.
+const isIos = computed(() => import.meta.client && /iphone|ipad|ipod/i.test(navigator.userAgent))
+const showIosInstall = ref(false)
+
+const showInstallSection = computed(() => {
+  if ($pwa?.isPWAInstalled) return false
+  return Boolean($pwa?.showInstallPrompt) || isIos.value
+})
+
+async function install() {
+  if (isIos.value) {
+    showIosInstall.value = true
+    return
+  }
+  await $pwa?.install()
+}
+
 /** Shows the inline "Tersimpan." next to the button for a moment. */
 function flash(flag: Ref<boolean>) {
   flag.value = true
@@ -339,6 +361,58 @@ async function savePassword() {
           </div>
         </form>
       </section>
+
+      <template v-if="showInstallSection">
+        <div class="my-8 border-t border-gray-200 md:my-10" />
+
+        <section class="md:grid md:grid-cols-3 md:gap-8">
+          <div class="md:col-span-1">
+            <h2 class="text-lg font-bold text-gray-800">
+              Aplikasi
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+              Pasang Sukabumi Logistik di layar utama supaya terbuka lebih cepat dan tetap bisa dibuka saat offline.
+            </p>
+          </div>
+          <div class="mt-4 md:col-span-2 md:mt-0">
+            <button
+              v-ripple.dark
+              type="button"
+              class="relative flex w-full items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-card lg:shadow-card-flat"
+              @click="install"
+            >
+              <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-50 pointer-events-none">
+                <UIcon
+                  name="i-lucide-download"
+                  class="size-5 text-primary"
+                />
+              </span>
+              <span class="min-w-0 flex-1 pointer-events-none">
+                <span class="block text-sm font-bold text-gray-800">Pasang aplikasi</span>
+                <span class="block text-sm text-gray-500">Buka langsung dari layar utama</span>
+              </span>
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-5 shrink-0 text-gray-400 pointer-events-none"
+              />
+            </button>
+          </div>
+        </section>
+      </template>
     </AppPageContent>
+
+    <AppDialog
+      v-model:open="showIosInstall"
+      title="Pasang di iPhone"
+      description="Safari belum mendukung pemasangan otomatis."
+    >
+      <template #body>
+        <ol class="space-y-3 p-5 text-sm text-gray-600">
+          <li>1. Tap tombol Bagikan di bagian bawah layar Safari.</li>
+          <li>2. Pilih <span class="font-semibold text-gray-800">Tambahkan ke Layar Utama</span>.</li>
+          <li>3. Tap <span class="font-semibold text-gray-800">Tambah</span>.</li>
+        </ol>
+      </template>
+    </AppDialog>
   </div>
 </template>
