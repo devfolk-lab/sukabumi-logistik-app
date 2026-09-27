@@ -58,8 +58,15 @@ html,
 body {
   overflow-x: hidden;
   max-width: 100%;
-  /* Without this, Android Chrome runs its own pull-to-refresh alongside
-     AppPullToRefresh — two spinners and a full page reload. */
+}
+
+/* Without this, Android Chrome runs its own pull-to-refresh alongside
+   AppPullToRefresh — two spinners and a full page reload. It goes on `html`
+   only: the root propagates it to the viewport, whereas `body` — a scroll
+   container of its own because of the `overflow-x` above — would use it to
+   refuse chaining every wheel and touch scroll up to the viewport, and the
+   page would not scroll at all. */
+html {
   overscroll-behavior-y: contain;
 }
 
