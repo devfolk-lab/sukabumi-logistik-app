@@ -18,38 +18,38 @@ function ago(h: number): Date {
 
 const HARI = 24
 
-/**
- * RajaOngkir V2 subdistricts. `label` follows the API's own
- * "SUBDISTRICT, DISTRICT, CITY, PROVINCE" shape, because `splitDestination` in
- * `server/utils/mappers.ts` reads the city out of the third segment.
- */
+/** Declared value of each seeded item, in rupiah. */
+const SEED_ITEM_VALUE = 100000
+
+/** Biteship areas (kecamatan + postal code): id, kecamatan, kota, provinsi, kode pos. */
 const PLACES = {
-  sukabumi: { id: 66109, label: 'GUNUNG PARANG, CIKOLE, KOTA SUKABUMI, JAWA BARAT', zipCode: '43111' },
-  cibadak: { id: 66512, label: 'CIBADAK, CIBADAK, KABUPATEN SUKABUMI, JAWA BARAT', zipCode: '43351' },
-  jakarta: { id: 17610, label: 'PALMERAH, PALMERAH, KOTA JAKARTA BARAT, DKI JAKARTA', zipCode: '11480' },
-  bandung: { id: 24619, label: 'SUKAJADI, SUKAJADI, KOTA BANDUNG, JAWA BARAT', zipCode: '40162' },
-  surabaya: { id: 33119, label: 'GUBENG, GUBENG, KOTA SURABAYA, JAWA TIMUR', zipCode: '60281' },
-  denpasar: { id: 35310, label: 'DANGIN PURI, DENPASAR TIMUR, KOTA DENPASAR, BALI', zipCode: '80234' },
-  medan: { id: 12758, label: 'PETISAH TENGAH, MEDAN PETISAH, KOTA MEDAN, SUMATERA UTARA', zipCode: '20112' }
+  sukabumi: ['IDNP9IDNC421IDND5218IDZ43111', 'Cikole', 'Sukabumi', 'Jawa Barat', 43111],
+  cibadak: ['IDNP9IDNC421IDND5206IDZ43351', 'Cibadak', 'Sukabumi', 'Jawa Barat', 43351],
+  jakarta: ['IDNP6IDNC146IDND825IDZ11480', 'Palmerah', 'Jakarta Barat', 'DKI Jakarta', 11480],
+  bandung: ['IDNP9IDNC22IDND2069IDZ40162', 'Sukajadi', 'Bandung', 'Jawa Barat', 40162],
+  surabaya: ['IDNP11IDNC434IDND5427IDZ60281', 'Gubeng', 'Surabaya', 'Jawa Timur', 60281],
+  denpasar: ['IDNP1IDNC110IDND260IDZ80234', 'Denpasar Timur', 'Denpasar', 'Bali', 80234],
+  medan: ['IDNP34IDNC273IDND2934IDZ20112', 'Medan Petisah', 'Medan', 'Sumatera Utara', 20112]
 } as const
 
 type PlaceKey = keyof typeof PLACES
 
-/**
- * Same split `server/utils/mappers.ts` applies to a live label. Duplicated
- * rather than imported: that module depends on Nuxt auto-imports, which a plain
- * Node script has no way to resolve.
- */
+/** The area object exactly as Biteship's `/v1/maps/areas` shapes it. */
 function place(key: PlaceKey) {
-  const { id, label, zipCode } = PLACES[key]
-  const parts = label.split(',').map(p => p.trim()).filter(Boolean)
+  const [id, district, city, province, postalCode] = PLACES[key]
 
   return {
     id,
-    label,
-    zipCode,
-    city: parts[2] ?? parts[1] ?? parts[0] ?? '-',
-    area: parts[0] ?? '-'
+    name: `${district}, ${city}, ${province}. ${postalCode}`,
+    country_name: 'Indonesia',
+    country_code: 'ID',
+    administrative_division_level_1_name: province,
+    administrative_division_level_1_type: 'province',
+    administrative_division_level_2_name: city,
+    administrative_division_level_2_type: 'city',
+    administrative_division_level_3_name: district,
+    administrative_division_level_3_type: 'district',
+    postal_code: postalCode
   }
 }
 
@@ -146,8 +146,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Palmerah Barat No. 45, Palmerah',
       courierCode: 'jne',
       courierName: 'JNE',
-      serviceCode: 'REG',
-      serviceName: 'Layanan Reguler',
+      serviceCode: 'reg',
+      serviceName: 'Reguler',
       etd: '2-3 hari',
       weightGram: 1500,
       content: 'Pakaian dan aksesoris',
@@ -174,8 +174,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Sukajadi No. 210, Sukajadi',
       courierCode: 'sicepat',
       courierName: 'SiCepat Express',
-      serviceCode: 'REG',
-      serviceName: 'Layanan Reguler',
+      serviceCode: 'reg',
+      serviceName: 'Reguler',
       etd: '1-2 hari',
       weightGram: 800,
       content: 'Buku dan alat tulis',
@@ -193,8 +193,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Gubeng Kertajaya VII No. 3, Gubeng',
       courierCode: 'jnt',
       courierName: 'J&T Express',
-      serviceCode: 'EZ',
-      serviceName: 'Reguler',
+      serviceCode: 'ez',
+      serviceName: 'EZ',
       etd: '3-4 hari',
       weightGram: 2000,
       content: 'Sepatu olahraga',
@@ -212,8 +212,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Nusa Kambangan No. 88, Dangin Puri',
       courierCode: 'anteraja',
       courierName: 'AnterAja',
-      serviceCode: 'REG',
-      serviceName: 'Anteraja Regular',
+      serviceCode: 'reg',
+      serviceName: 'Reguler',
       etd: '3-5 hari',
       weightGram: 3200,
       content: 'Kopi bubuk 3 kg',
@@ -239,7 +239,7 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Gatot Subroto No. 17, Petisah Tengah',
       courierCode: 'pos',
       courierName: 'POS Indonesia',
-      serviceCode: 'Pos Reguler',
+      serviceCode: 'reg',
       serviceName: 'Pos Reguler',
       etd: '4-6 hari',
       weightGram: 5000,
@@ -258,8 +258,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Raya Cibadak No. 101, Cibadak',
       courierCode: 'sicepat',
       courierName: 'SiCepat Express',
-      serviceCode: 'SDS',
-      serviceName: 'SiCepat SDS Same Day Service',
+      serviceCode: 'best',
+      serviceName: 'Best',
       etd: '1 hari',
       weightGram: 1000,
       content: 'Dokumen kontrak',
@@ -277,8 +277,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Kemanggisan Ilir III No. 9, Palmerah',
       courierCode: 'tiki',
       courierName: 'TIKI',
-      serviceCode: 'ONS',
-      serviceName: 'Over Night Service',
+      serviceCode: 'ons',
+      serviceName: 'ONS',
       etd: '1 hari',
       weightGram: 1200,
       content: 'Oleh-oleh mochi Sukabumi',
@@ -296,8 +296,8 @@ const demo: SeedAccount = {
       receiverAlamat: 'Jl. Cipedes Tengah No. 24, Sukajadi',
       courierCode: 'ninja',
       courierName: 'Ninja Xpress',
-      serviceCode: 'STANDARD',
-      serviceName: 'Ninja Standard',
+      serviceCode: 'standard',
+      serviceName: 'Standard',
       etd: '1-2 hari',
       weightGram: 700,
       content: 'Casing handphone',
@@ -344,8 +344,8 @@ const siti: SeedAccount = {
       receiverAlamat: 'Jl. Palmerah Utara No. 3, Palmerah',
       courierCode: 'jne',
       courierName: 'JNE',
-      serviceCode: 'REG',
-      serviceName: 'Layanan Reguler',
+      serviceCode: 'reg',
+      serviceName: 'Reguler',
       etd: '2-3 hari',
       weightGram: 2500,
       content: 'Keripik singkong 2.5 kg',
@@ -363,8 +363,8 @@ const siti: SeedAccount = {
       receiverAlamat: 'Jl. Pasteur No. 77, Sukajadi',
       courierCode: 'jnt',
       courierName: 'J&T Express',
-      serviceCode: 'EZ',
-      serviceName: 'Reguler',
+      serviceCode: 'ez',
+      serviceName: 'EZ',
       etd: '1-2 hari',
       weightGram: 900,
       content: 'Mukena bordir',
@@ -402,9 +402,7 @@ export function addressData(address: SeedAddress) {
     nama: address.nama,
     telp: address.telp,
     alamat: address.alamat,
-    destinationId: p.id,
-    destinationLabel: p.label,
-    zipCode: p.zipCode,
+    area: p,
     isMain: address.isMain ?? false
   }
 }
@@ -425,14 +423,8 @@ export function orderData(account: SeedAccount, order: SeedOrder) {
     receiverTelp: order.receiverTelp,
     receiverAlamat: order.receiverAlamat,
 
-    originId: origin.id,
-    originLabel: origin.label,
-    originCity: origin.city,
-    originArea: origin.area,
-    destinationId: destination.id,
-    destinationLabel: destination.label,
-    destinationCity: destination.city,
-    destinationArea: destination.area,
+    originArea: origin,
+    destinationArea: destination,
 
     courierCode: order.courierCode,
     courierName: order.courierName,
@@ -441,16 +433,29 @@ export function orderData(account: SeedAccount, order: SeedOrder) {
     etd: order.etd,
 
     weightGram: order.weightGram,
-    content: order.content,
+    // One line per fixture, named after its contents.
+    items: {
+      create: [{
+        position: 0,
+        name: order.content,
+        category: 'others',
+        value: SEED_ITEM_VALUE,
+        quantity: 1,
+        weight: order.weightGram
+      }]
+    },
 
     shippingCost: order.shippingCost,
     total: order.shippingCost,
 
     awb: order.awb ?? null,
-    // Left null on purpose: `syncTracking` would otherwise chase a Komship order
-    // number that does not exist in the sandbox.
-    komshipOrderId: null,
-    komshipOrderNo: null,
+    // Left null on purpose: these shipments were never booked on Biteship, so
+    // `syncTracking` has nothing to follow and serves the seeded events.
+    biteshipOrderId: null,
+    biteshipTrackingId: null,
+    trackingUrl: null,
+    paymentMethod: order.status === 'MENUNGGU_PEMBAYARAN' ? null : 'DEMO',
+    paidAt: order.status === 'MENUNGGU_PEMBAYARAN' ? null : ago(order.createdAgo),
 
     createdAt: ago(order.createdAgo),
     updatedAt: ago(order.updatedAgo),
@@ -458,7 +463,7 @@ export function orderData(account: SeedAccount, order: SeedOrder) {
     trackingEvents: {
       create: (order.events ?? []).map(e => ({
         title: e.title,
-        location: e.location ?? origin.city,
+        location: e.location ?? origin.administrative_division_level_2_name,
         occurredAt: ago(e.at)
       }))
     }

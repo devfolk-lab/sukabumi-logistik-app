@@ -14,7 +14,7 @@ const { data: addresses } = useAddresses()
 watch([profile, addresses], () => {
   if (booking.sender.nama || booking.origin) return
 
-  const utama = addresses.value.find(a => a.main && a.destinationId)
+  const utama = addresses.value.find(a => a.main && a.area)
 
   if (utama) {
     booking.useAddress('sender', utama)
@@ -28,8 +28,7 @@ onMounted(() => preloadRouteComponents('/kirim/kurir'))
 
 const kurang = computed(() => {
   if (!booking.hasRoute) return 'Pilih lokasi penjemputan dan tujuan dulu.'
-  if (booking.weight <= 0) return 'Isi berat paket dulu.'
-  return ''
+  return booking.itemsProblem
 })
 
 async function next() {

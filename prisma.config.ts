@@ -6,9 +6,10 @@ import { supabaseDatabaseUrls } from './server/utils/supabase-db'
 // pooler on 6543 cannot hold the advisory locks Prisma Migrate needs.
 //
 // `prisma generate` (run by postinstall, including in CI where there is no
-// `.env`) needs no database, so the URL is only resolved once the Supabase
-// settings are present. Migrate and seed refuse to run without a datasource.
-const datasource = process.env.NUXT_SUPABASE_PASSWORD
+// `.env`) needs no database, so the URL is only resolved once
+// `NUXT_SUPABASE_DIRECT_URL` is present. Migrate and seed refuse to run
+// without a datasource.
+const datasource = process.env.NUXT_SUPABASE_DIRECT_URL
   ? { url: supabaseDatabaseUrls().session }
   : undefined
 

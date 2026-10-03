@@ -4,6 +4,8 @@ definePageMeta({ layout: 'auth' })
 const { register } = useAuthActions()
 const toast = useToast()
 
+const registeredEmail = useState<string>('registeredEmail', () => '')
+
 const nama = ref('')
 const email = ref('')
 const telepon = ref('')
@@ -32,11 +34,8 @@ async function submit() {
       telp: telepon.value.trim(),
       password: password.value
     })
-    toast.add({
-      title: 'Akun berhasil dibuat!',
-      description: `Selamat datang, ${nama.value.trim()}.`
-    })
-    await navigateTo('/')
+    registeredEmail.value = email.value.trim()
+    await navigateTo('/register/terkirim')
   } catch (error) {
     toast.add({
       title: 'Gagal mendaftar',

@@ -15,6 +15,19 @@ const tiles = computed(() => [
   { label: 'Dibatalkan', value: stats.value?.batal ?? 0, icon: 'i-lucide-triangle-alert', bg: 'bg-red-50', text: 'text-red-500' }
 ])
 
+// Pusat Bantuan is a WhatsApp chat with the team, opened with a greeting
+// already typed. `wa.me` hands off to the app on a phone and to WhatsApp Web
+// elsewhere.
+const helpNumber = String(useRuntimeConfig().public.helpWhatsapp ?? '').replace(/\D/g, '')
+const helpUrl = helpNumber
+  ? `https://wa.me/${helpNumber}?text=${encodeURIComponent('Halo Sukabumi Logistik, saya butuh bantuan.')}`
+  : undefined
+const toast = useToast()
+
+function helpUnavailable() {
+  toast.add({ title: 'Pusat Bantuan belum tersedia', description: 'Nomor WhatsApp bantuan belum diatur.', color: 'warning' })
+}
+
 const menu = [
   { label: 'Alamat Tersimpan', to: '/alamat', icon: 'i-lucide-map-pin' },
   { label: 'Pengaturan Akun', to: '/profil/pengaturan', icon: 'i-lucide-settings' }
@@ -132,25 +145,27 @@ const menu = [
         />
       </NuxtLink>
 
-      <button
+      <component
+        :is="helpUrl ? 'a' : 'button'"
         v-ripple.dark
-        type="button"
+        v-bind="helpUrl ? { href: helpUrl, target: '_blank', rel: 'noopener' } : { type: 'button' }"
         class="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-card hover:bg-gray-50 lg:shadow-card-flat"
+        @click="helpUrl || helpUnavailable()"
       >
         <span class="pointer-events-none flex items-center gap-3 text-sm font-semibold text-gray-700">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-50">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
             <UIcon
-              name="i-lucide-circle-help"
-              class="size-4 text-primary"
+              name="i-simple-icons-whatsapp"
+              class="size-4 text-emerald-600"
             />
           </span>
           Pusat Bantuan
         </span>
         <UIcon
-          name="i-lucide-chevron-right"
+          name="i-lucide-external-link"
           class="pointer-events-none size-4 text-gray-300"
         />
-      </button>
+      </component>
 
       <button
         v-ripple.dark

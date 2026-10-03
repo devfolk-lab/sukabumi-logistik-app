@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Order, Shipment } from '~/types'
+import { useBookingStore } from '~/stores/booking'
 
 const route = useRoute()
 const nav = useAppNav()
@@ -26,7 +27,71 @@ const loading = computed(() => status.value === 'pending' || status.value === 'i
 const order = computed(() => data.value?.order)
 const shipment = computed(() => data.value?.shipment)
 
+const routePoints = computed(() => order.value
+  ? [
+      { label: 'Lokasi Penjemputan', area: order.value.origin, party: order.value.sender },
+      { label: 'Lokasi Tujuan', area: order.value.destination, party: order.value.receiver }
+    ]
+  : [])
+
 const belumBayar = computed(() => order.value?.stage === 'MENUNGGU_PEMBAYARAN')
+
+/** Why the tracking card has no carrier history to show. */
+const alasanTanpaRiwayat = computed(() => {
+  if (belumBayar.value) return 'Riwayat pelacakan muncul setelah pembayaran dikonfirmasi dan paket diserahkan ke kurir.'
+  if (order.value?.stage === 'BATAL') return 'Pesanan dibatalkan sebelum ada kabar dari kurir.'
+  return 'Belum ada kabar dari kurir. Tarik layar ke bawah untuk memperbarui.'
+})
+/**
+ * Why the label cannot be printed yet, or `''` when it can. A label only makes
+ * sense once the carrier has issued a waybill, so the button stays visible
+ * but disabled until then, with the reason under it.
+ */
+const alasanTidakCetak = computed(() => {
+  if (!order.value) return ''
+  if (order.value.stage === 'BATAL') return 'Pesanan dibatalkan, resi tidak bisa dicetak.'
+  if (order.value.stage === 'MENUNGGU_PEMBAYARAN') return 'Resi bisa dicetak setelah pembayaran dikonfirmasi.'
+  if (!order.value.awb) return 'Menunggu nomor resi dari kurir.'
+  return ''
+})
+const bisaCetak = computed(() => Boolean(order.value) && !alasanTidakCetak.value)
+
+const printer = useTemplateRef('printer')
+const mengunduh = ref(false)
+
+/** Opens the print dialog for the label, right here — no navigation. */
+async function cetakResi() {
+  if (!printer.value || !bisaCetak.value) return
+  try {
+    await printer.value.print()
+  } catch (err) {
+    console.error(err)
+    toast.add({ title: 'Gagal mencetak resi', description: 'Coba lagi sebentar.', color: 'error' })
+  }
+}
+
+/** Saves the label as a PDF without leaving this page. */
+async function unduhResi() {
+  if (!printer.value || !bisaCetak.value || mengunduh.value) return
+  mengunduh.value = true
+  try {
+    await printer.value.download()
+  } catch (err) {
+    console.error(err)
+    toast.add({ title: 'Gagal mengunduh resi', description: 'Coba lagi sebentar.', color: 'error' })
+  } finally {
+    mengunduh.value = false
+  }
+}
+
+const booking = useBookingStore()
+
+/** Starts a fresh booking over the same pickup and delivery addresses. */
+async function kirimLagi() {
+  if (!order.value) return
+  booking.repeatOrder(order.value)
+  await navigateTo('/kirim')
+}
 const bisaDibatalkan = computed(() =>
   order.value?.stage === 'MENUNGGU_PEMBAYARAN' || order.value?.stage === 'DIPROSES' || order.value?.stage === 'DIJEMPUT'
 )
@@ -141,7 +206,7 @@ async function cancel() {
 
     <AppPageContent
       v-else
-      class="mt-5 space-y-5 pb-32"
+      class="mt-5 space-y-5 pb-64"
     >
       <div
         v-if="order.status !== 'batal'"
@@ -170,6 +235,37 @@ async function cancel() {
         </div>
       </div>
 
+      <!-- The carrier's own history, synced from Biteship on every load -->
+      <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <p class="text-xs font-bold uppercase tracking-wider text-gray-400">
+            Riwayat Pelacakan
+          </p>
+          <span
+            v-if="shipment.tracked"
+            class="text-xs font-semibold text-gray-400"
+          >
+            {{ shipment.timeline.length }} pembaruan
+          </span>
+        </div>
+        <LacakTrackingTimeline
+          v-if="shipment.tracked"
+          :steps="shipment.timeline"
+        />
+        <div
+          v-else
+          class="flex items-start gap-3 rounded-2xl bg-gray-50 p-3"
+        >
+          <UIcon
+            name="i-lucide-radar"
+            class="mt-0.5 size-5 shrink-0 text-gray-400"
+          />
+          <p class="text-sm text-gray-500">
+            {{ alasanTanpaRiwayat }}
+          </p>
+        </div>
+      </div>
+
       <!-- Route -->
       <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
         <p class="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">
@@ -188,27 +284,29 @@ async function cancel() {
               />
             </div>
           </div>
-          <div class="min-w-0 pb-4">
+          <div
+            v-for="(point, index) in routePoints"
+            :key="point.label"
+            class="min-w-0"
+            :class="index === 0 ? 'pb-4' : ''"
+          >
             <p class="text-xs font-bold text-gray-400 uppercase">
-              Lokasi Penjemputan
+              {{ point.label }}
             </p>
             <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ destinationTitle(destinationFromLabel(0, order.originLabel)) }}
+              {{ areaTitle(point.area) }}
             </p>
             <p class="text-sm text-gray-500">
-              {{ destinationSubtitle(destinationFromLabel(0, order.originLabel)) }}
+              {{ areaSubtitle(point.area) }}
             </p>
-          </div>
-          <div class="min-w-0">
-            <p class="text-xs font-bold text-gray-400 uppercase">
-              Lokasi Tujuan
-            </p>
-            <p class="mt-1 text-base font-semibold text-gray-800">
-              {{ destinationTitle(destinationFromLabel(0, order.destinationLabel)) }}
-            </p>
-            <p class="text-sm text-gray-500">
-              {{ destinationSubtitle(destinationFromLabel(0, order.destinationLabel)) }}
-            </p>
+            <div class="mt-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-sm leading-snug">
+              <p class="font-semibold text-gray-800">
+                {{ point.party.nama }} <span class="font-normal text-gray-500">· {{ point.party.telp }}</span>
+              </p>
+              <p class="text-gray-600">
+                {{ point.party.alamat }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -216,26 +314,9 @@ async function cancel() {
       <!-- Package Details -->
       <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
         <p class="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">
-          Detail Paket
+          Rincian Paket
         </p>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase">
-              Berat
-            </p>
-            <p class="mt-0.5 text-base font-bold text-gray-800">
-              {{ order.weight }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase">
-              Isi Paket
-            </p>
-            <p class="mt-0.5 text-base font-bold text-gray-800">
-              {{ order.content }}
-            </p>
-          </div>
-        </div>
+        <AppPackageItems :items="order.items" />
       </div>
 
       <!-- References: the carrier's numbers first, ours last -->
@@ -256,26 +337,51 @@ async function cancel() {
                 {{ order.awb ?? 'Menunggu dari kurir' }}
               </dd>
             </div>
-            <UButton
+            <div
               v-if="order.awb"
-              :to="{ path: `/lacak/${order.awb}`, query: { courier: order.courierCode } }"
-              color="primary"
-              variant="soft"
-              size="lg"
-              class="shrink-0 font-bold"
+              class="flex shrink-0 gap-2"
             >
-              Lacak
-            </UButton>
+              <UButton
+                v-if="bisaCetak"
+                icon="i-lucide-printer"
+                color="primary"
+                variant="soft"
+                size="lg"
+                class="font-bold"
+                aria-label="Cetak resi"
+                @click="cetakResi"
+              />
+              <UButton
+                v-if="bisaCetak"
+                icon="i-lucide-download"
+                color="primary"
+                variant="soft"
+                size="lg"
+                class="font-bold"
+                aria-label="Unduh resi (PDF)"
+                :loading="mengunduh"
+                @click="unduhResi"
+              />
+              <UButton
+                :to="{ path: `/lacak/${order.awb}`, query: { courier: order.courierCode } }"
+                color="primary"
+                variant="soft"
+                size="lg"
+                class="font-bold"
+              >
+                Lacak
+              </UButton>
+            </div>
           </div>
           <div
-            v-if="order.komshipOrderNo"
+            v-if="order.biteshipOrderId"
             class="py-2.5"
           >
             <dt class="text-xs font-semibold text-gray-400">
-              No. order RajaOngkir
+              No. order Biteship
             </dt>
             <dd class="mt-0.5 truncate font-mono text-base font-bold text-gray-800">
-              {{ order.komshipOrderNo }}
+              {{ order.biteshipOrderId }}
             </dd>
           </div>
           <div class="py-2.5 last:pb-0">
@@ -310,26 +416,95 @@ async function cancel() {
           </p>
         </div>
       </div>
+
+      <ResiPrinter
+        v-if="bisaCetak"
+        ref="printer"
+        :order="order"
+      />
     </AppPageContent>
 
     <AppStickyBar v-if="order && !loading">
       <div class="w-full space-y-2">
         <button
+          v-if="belumBayar"
           type="button"
           class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
-          :disabled="pending || (belumBayar && !online)"
-          :title="belumBayar && !online ? 'Butuh koneksi internet' : undefined"
-          @click="belumBayar ? pay() : navigateTo('/kirim')"
+          :disabled="pending || !online"
+          :title="!online ? 'Butuh koneksi internet' : undefined"
+          @click="pay"
         >
           <span
             v-ripple
             class="absolute inset-0 rounded-2xl"
           />
           <span class="relative z-10 pointer-events-none">
-            <!-- "Pesan Lagi" only navigates, so it stays usable offline. -->
-            {{ belumBayar ? (online ? 'Lanjutkan Bayar' : 'Butuh koneksi internet') : 'Pesan Lagi' }}
+            {{ online ? 'Lanjutkan Bayar' : 'Butuh koneksi internet' }}
           </span>
         </button>
+        <!-- None of these touch the server, so they stay usable offline. -->
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="relative flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            :disabled="!bisaCetak"
+            :title="alasanTidakCetak || undefined"
+            @click="cetakResi"
+          >
+            <span
+              v-if="bisaCetak"
+              v-ripple
+              class="absolute inset-0 rounded-2xl"
+            />
+            <UIcon
+              name="i-lucide-printer"
+              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
+            />
+            <span class="relative z-10 pointer-events-none">Cetak Resi</span>
+          </button>
+          <button
+            type="button"
+            class="relative flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-2 border-primary/20 bg-white py-2.5 text-sm font-bold text-primary hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!bisaCetak || mengunduh"
+            :title="alasanTidakCetak || 'Unduh resi sebagai PDF'"
+            @click="unduhResi"
+          >
+            <span
+              v-if="bisaCetak"
+              v-ripple.dark
+              class="absolute inset-0 rounded-2xl"
+            />
+            <UIcon
+              :name="mengunduh ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
+              :class="{ 'animate-spin': mengunduh }"
+            />
+            <span class="relative z-10 pointer-events-none">Unduh Resi</span>
+          </button>
+          <button
+            v-ripple.dark
+            type="button"
+            class="flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-2 border-primary/20 bg-white py-2.5 text-sm font-bold text-primary hover:border-primary/40"
+            title="Kirim paket baru dengan alamat pengirim dan penerima yang sama"
+            @click="kirimLagi"
+          >
+            <UIcon
+              name="i-lucide-repeat"
+              class="size-4.5 shrink-0 pointer-events-none"
+            />
+            <span class="pointer-events-none">Kirim Lagi</span>
+          </button>
+        </div>
+        <p
+          v-if="alasanTidakCetak"
+          class="flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-gray-500"
+        >
+          <UIcon
+            name="i-lucide-info"
+            class="size-3.5 shrink-0"
+          />
+          {{ alasanTidakCetak }}
+        </p>
         <button
           v-if="bisaDibatalkan"
           v-ripple.dark

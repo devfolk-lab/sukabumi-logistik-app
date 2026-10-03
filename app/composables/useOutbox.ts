@@ -25,7 +25,7 @@ export function useOutbox() {
   }
 
   async function enqueue(input: EnqueueInput): Promise<void> {
-    const userId = useSupabaseUser().value?.id
+    const userId = useAuthUser().value?.id
     if (!userId) return
 
     await idbPut<OutboxEntry>(OUTBOX_STORE, {

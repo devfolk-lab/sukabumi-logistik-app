@@ -88,15 +88,20 @@ const emit = defineEmits<{
     <p class="mt-2 text-sm leading-relaxed text-gray-600">
       {{ address.alamat }}
     </p>
+    <AppAreaDetails
+      v-if="address.area"
+      :area="address.area"
+      class="mt-3"
+    />
     <p
-      v-if="address.destinationLabel"
-      class="mt-2 flex items-start gap-1.5 text-xs font-semibold text-gray-400"
+      v-else
+      class="mt-2 flex items-start gap-1.5 text-xs font-semibold text-amber-600"
     >
       <UIcon
-        name="i-lucide-map-pin"
+        name="i-lucide-triangle-alert"
         class="mt-0.5 size-3.5 shrink-0"
       />
-      {{ address.destinationLabel }}
+      Kecamatan belum diisi, ubah alamat ini untuk melengkapinya.
     </p>
   </div>
 </template>

@@ -1,116 +1,164 @@
 import 'dotenv/config'
-import { gzipSync } from 'node:zlib'
+import { gunzipSync, gzipSync } from 'node:zlib'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 /**
- * Crawls RajaOngkir V2's province → city → district → sub-district tree into
- * `server/assets/destinations.tsv.gz`, which `/api/destinations` searches
- * locally. The hosted search endpoint only matches whole words ("cibad" finds
- * nothing, "cibadak" does), so per-keystroke suggestions need a local index.
+ * Keys the local destination index (`server/assets/destinations.tsv.gz`) to
+ * Biteship area ids. Biteship's hosted area search only matches whole words
+ * ("cibad" finds Cibal, "cibadak" finds Cibadak) and stops at kecamatan level,
+ * so per-keystroke suggestions and kelurahan names need a local index.
  *
- * Run with `pnpm build:destinations`. Around 7,500 requests, and the API bans
- * bursts for minutes at a time, so requests are paced and progress is
- * checkpointed in `scripts/.cache/` — re-run to resume after an interruption.
+ * The kelurahan list is the snapshot's own: every postal code already in it is
+ * looked up once on Biteship (`/v1/maps/areas?input=<zip>`), and each
+ * kelurahan is attached to the Biteship area (kecamatan + postal code) whose
+ * name matches. Every Biteship area also gets a kecamatan-level row, so a
+ * kelurahan that cannot be matched is dropped without losing its kecamatan.
+ *
+ * Row layout: areaId, kelurahan, kecamatan, city, province, zip — kelurahan is
+ * empty on kecamatan-level rows. Re-running is idempotent: the output is a
+ * valid input. Around 8,300 requests, paced and checkpointed in
+ * `scripts/.cache/`, so re-run to resume after an interruption.
  */
 
-const BASE_URL = process.env.NUXT_RAJAONGKIR_BASE_URL ?? 'https://rajaongkir.komerce.id/api/v1'
-const KEY = process.env.NUXT_RAJAONGKIR_SHIPPING_COST_API_KEY
+const BASE_URL = (process.env.NUXT_BITESHIP_BASE_URL || 'https://api.biteship.com').replace(/\/$/, '')
+const KEY = process.env.NUXT_BITESHIP_API_KEY
 const OUT = resolve('server/assets/destinations.tsv.gz')
 const CACHE_DIR = resolve('scripts/.cache')
-const TREE = resolve(CACHE_DIR, 'destinations-tree.json')
-const PROGRESS = resolve(CACHE_DIR, 'destinations-progress.tsv')
-const PACE_MS = Number(process.env.RAJAONGKIR_CRAWL_PACE_MS ?? 1100)
+const PROGRESS = resolve(CACHE_DIR, 'biteship-areas.jsonl')
+const PACE_MS = Number(process.env.BITESHIP_CRAWL_PACE_MS ?? 300)
 
 if (!KEY) {
-  console.error('NUXT_RAJAONGKIR_SHIPPING_COST_API_KEY is not set')
+  console.error('NUXT_BITESHIP_API_KEY is not set')
   process.exit(1)
 }
 
-interface Envelope<T> { meta: { code: number, status: string, message: string }, data: T }
-interface Named { id: number, name: string }
-interface SubDistrict extends Named { zip_code: string }
-interface District extends Named { city: string, province: string }
+if (!existsSync(OUT)) {
+  console.error(`${OUT} is missing — it is the kelurahan source this script re-keys`)
+  process.exit(1)
+}
+
+interface Area {
+  id: string
+  administrative_division_level_1_name: string
+  administrative_division_level_2_name: string
+  administrative_division_level_3_name: string
+  postal_code: number
+}
+
+interface Kelurahan { name: string, district: string }
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 let lastRequest = 0
 
-async function get<T>(path: string, attempt = 0): Promise<T> {
+async function areasForZip(zip: string, attempt = 0): Promise<Area[]> {
   const wait = lastRequest + PACE_MS - Date.now()
   if (wait > 0) await sleep(wait)
   lastRequest = Date.now()
 
-  const res = await fetch(`${BASE_URL}${path}`, { headers: { key: KEY! } })
-  const body = await res.json().catch(() => null) as Envelope<T> | null
+  const url = `${BASE_URL}/v1/maps/areas?countries=ID&type=single&input=${encodeURIComponent(zip)}`
+  const res = await fetch(url, { headers: { authorization: KEY! } })
+  const body = await res.json().catch(() => null) as { success?: boolean, areas?: Area[], error?: string } | null
 
-  if (body?.meta?.status === 'success') return body.data
-  // A 404 envelope means an empty branch (some districts have no rows).
-  if (body?.meta?.code === 404) return [] as T
+  // The search is fuzzy, so keep only areas that actually carry this code.
+  if (body?.success) return (body.areas ?? []).filter(a => String(a.postal_code) === zip)
 
   if (res.status === 429) {
-    const seconds = Number(/(\d+) seconds/.exec(body?.meta?.message ?? '')?.[1] ?? 60)
-    console.log(`rate limited, sleeping ${seconds + 5}s`)
-    await sleep((seconds + 5) * 1000)
-    return get(path, attempt)
+    console.log('rate limited, sleeping 60s')
+    await sleep(60_000)
+    return areasForZip(zip, attempt)
   }
 
   if (attempt < 4) {
     await sleep(1000 * 2 ** attempt)
-    return get(path, attempt + 1)
+    return areasForZip(zip, attempt + 1)
   }
-  throw new Error(`${path}: ${res.status} ${body?.meta?.message ?? ''}`)
+  throw new Error(`${zip}: ${res.status} ${body?.error ?? ''}`)
 }
+
+// Kelurahan per postal code, from the current snapshot. Only columns 1–5 are
+// read, which have the same meaning in the old and the new layout.
+const kelurahanByZip = new Map<string, Kelurahan[]>()
+const source = gunzipSync(readFileSync(OUT)).toString('utf8')
+for (const line of source.split('\n')) {
+  const [, name, district, , , zip] = line.split('\t')
+  if (!zip) continue
+  const list = kelurahanByZip.get(zip) ?? []
+  if (name) list.push({ name, district: district ?? '' })
+  kelurahanByZip.set(zip, list)
+}
+console.log(`${kelurahanByZip.size} postal codes to look up`)
 
 mkdirSync(CACHE_DIR, { recursive: true })
 
-// Pass 1: the district tree, cached so a resume skips ~550 requests.
-let districts: District[]
-if (existsSync(TREE)) {
-  districts = JSON.parse(readFileSync(TREE, 'utf8'))
-  console.log(`${districts.length} districts from cache`)
-} else {
-  districts = []
-  const provinces = await get<Named[]>('/destination/province')
-  console.log(`${provinces.length} provinces`)
-  for (const province of provinces) {
-    const cities = await get<Named[]>(`/destination/city/${province.id}`)
-    for (const city of cities) {
-      const rows = await get<Named[]>(`/destination/district/${city.id}`)
-      districts.push(...rows.map(d => ({ ...d, city: city.name, province: province.name })))
-    }
-    console.log(`${province.name}: ${cities.length} cities, ${districts.length} districts so far`)
-  }
-  writeFileSync(TREE, JSON.stringify(districts))
-}
-
-// Pass 2: sub-districts, appended to the progress file one district at a time.
-const done = new Set<number>()
-const rows: string[] = []
+const areasByZip = new Map<string, Area[]>()
 if (existsSync(PROGRESS)) {
   for (const line of readFileSync(PROGRESS, 'utf8').split('\n')) {
     if (!line) continue
-    if (line.startsWith('done\t')) done.add(Number(line.slice(5)))
-    else rows.push(line)
+    const { zip, areas } = JSON.parse(line) as { zip: string, areas: Area[] }
+    areasByZip.set(zip, areas)
   }
-  console.log(`resuming: ${done.size} districts, ${rows.length} rows already fetched`)
+  console.log(`resuming: ${areasByZip.size} postal codes already fetched`)
 }
 
 let count = 0
-for (const district of districts) {
-  if (done.has(district.id)) continue
-  const subs = await get<SubDistrict[]>(`/destination/sub-district/${district.id}`)
-  const lines = subs.map(sub =>
-    // Same shape as the hosted search's `label`, so both paths map identically.
-    [sub.id, sub.name, district.name, district.city, district.province, sub.zip_code].join('\t')
-  )
-  rows.push(...lines)
-  appendFileSync(PROGRESS, lines.map(l => `${l}\n`).join('') + `done\t${district.id}\n`)
-  done.add(district.id)
-  if (++count % 100 === 0) console.log(`${done.size}/${districts.length} districts, ${rows.length} rows`)
+for (const zip of kelurahanByZip.keys()) {
+  if (areasByZip.has(zip)) continue
+  const areas = await areasForZip(zip)
+  areasByZip.set(zip, areas)
+  appendFileSync(PROGRESS, `${JSON.stringify({ zip, areas })}\n`)
+  if (++count % 250 === 0) console.log(`${areasByZip.size}/${kelurahanByZip.size} postal codes`)
 }
 
-rows.sort((a, b) => Number(a.split('\t')[0]) - Number(b.split('\t')[0]))
+/** The Biteship area a kelurahan belongs to, or null when no name matches. */
+function matchArea(kelurahan: Kelurahan, areas: Area[]): Area | null {
+  if (areas.length === 1) return areas[0]!
+  const district = norm(kelurahan.district)
+  return areas.find(a => norm(a.administrative_division_level_3_name) === district)
+    ?? areas.find((a) => {
+      const name = norm(a.administrative_division_level_3_name)
+      return name.includes(district) || district.includes(name)
+    })
+    ?? null
+}
+
+// Keyed by everything but the id: Biteship lists a few kecamatan twice under
+// different ids, and the picker tells rows apart by label, so the first one
+// wins.
+const rows = new Map<string, string>()
+let dropped = 0
+let emptyZips = 0
+
+function add(area: Area, kelurahan: string) {
+  const label = [
+    kelurahan,
+    area.administrative_division_level_3_name,
+    area.administrative_division_level_2_name,
+    area.administrative_division_level_1_name,
+    String(area.postal_code)
+  ].join('\t')
+  if (!rows.has(label)) rows.set(label, `${area.id}\t${label}`)
+}
+
+for (const [zip, kelurahan] of kelurahanByZip) {
+  const areas = areasByZip.get(zip) ?? []
+  if (!areas.length) {
+    emptyZips++
+    dropped += kelurahan.length
+    continue
+  }
+  for (const area of areas) add(area, '')
+  for (const k of kelurahan) {
+    const area = matchArea(k, areas)
+    if (area) add(area, k.name)
+    else dropped++
+  }
+}
+
+const lines = [...rows.values()].sort()
 mkdirSync(dirname(OUT), { recursive: true })
-writeFileSync(OUT, gzipSync(rows.join('\n'), { level: 9 }))
-console.log(`wrote ${rows.length} destinations to ${OUT}`)
+writeFileSync(OUT, gzipSync(lines.join('\n'), { level: 9 }))
+console.log(`wrote ${lines.length} destinations to ${OUT}`)
+console.log(`${dropped} kelurahan without a matching Biteship area, ${emptyZips} postal codes unknown to Biteship`)

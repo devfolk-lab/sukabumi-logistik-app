@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import type { Address, Destination } from '~/types'
+import type { Address, Area } from '~/types'
 
 export interface AddressFormPayload {
   label: string
   nama: string
   telp: string
   alamat: string
-  destinationId: number | null
-  destinationLabel: string | null
-  zipCode: string | null
+  area: Area | null
 }
 
 /** Pass `address` to edit an existing row; the form starts from its values. */
@@ -35,13 +33,7 @@ const form = reactive({
   alamat: props.address?.alamat ?? ''
 })
 
-// A saved address only keeps the subdistrict id and label, so the picker's
-// initial value is rebuilt from those.
-const destination = ref<Destination | undefined>(
-  props.address?.destinationId
-    ? destinationFromLabel(props.address.destinationId, props.address.destinationLabel ?? '', props.address.zipCode)
-    : undefined
-)
+const area = ref<Area | undefined>(props.address?.area ?? undefined)
 
 const isEditing = computed(() => Boolean(props.address))
 
@@ -69,9 +61,7 @@ function submit() {
     nama: form.nama.trim(),
     telp: form.telp.trim(),
     alamat: form.alamat.trim(),
-    destinationId: destination.value?.id ?? null,
-    destinationLabel: destination.value?.label ?? null,
-    zipCode: destination.value?.zipCode ?? null
+    area: area.value ?? null
   })
 }
 </script>
@@ -130,10 +120,10 @@ function submit() {
     </UFormField>
 
     <UFormField
-      label="Kelurahan / Kecamatan"
+      label="Kecamatan"
       help="Dipakai untuk menghitung ongkir saat memesan dari alamat ini."
     >
-      <AppDestinationSelect v-model="destination" />
+      <AppDestinationSelect v-model="area" />
     </UFormField>
 
     <UFormField

@@ -5,7 +5,7 @@ import { useBookingStore } from '~/stores/booking'
 const booking = useBookingStore()
 const nav = useAppNav()
 
-if (!booking.hasRoute) {
+if (!booking.hasRoute || booking.itemsProblem) {
   await navigateTo('/kirim', { replace: true })
 }
 
@@ -20,15 +20,15 @@ const { data: rates, status, error } = useAsyncData(
     body: {
       originId: booking.origin!.id,
       destinationId: booking.destination!.id,
-      weightGram: booking.weightGram
+      items: booking.items
     }
   }),
   {
     default: () => [],
     // Never hold the route change for the quote; the skeleton covers it.
     lazy: true,
-    // Re-price whenever the route or weight changes.
-    watch: [() => booking.origin?.id, () => booking.destination?.id, () => booking.weightGram]
+    // Re-price whenever the route or any item changes.
+    watch: [() => booking.origin?.id, () => booking.destination?.id, () => JSON.stringify(booking.items)]
   }
 )
 
@@ -62,14 +62,9 @@ onMounted(() => preloadRouteComponents('/kirim/detail'))
               class="relative z-10 size-5 text-white pointer-events-none"
             />
           </button>
-          <div>
-            <h1 class="text-xl font-bold text-white">
-              Pilih Kurir
-            </h1>
-            <p class="text-sm text-white/60">
-              Tarif langsung dari kurir untuk {{ booking.weight }} kg
-            </p>
-          </div>
+          <h1 class="text-xl font-bold text-white">
+            Pilih Kurir
+          </h1>
         </div>
 
         <MitraRouteCard />
@@ -116,7 +111,7 @@ onMounted(() => preloadRouteComponents('/kirim/detail'))
         v-else-if="!couriers.length"
         class="rounded-3xl bg-white p-6 text-center text-sm text-gray-500 shadow-card lg:shadow-card-flat"
       >
-        Tidak ada layanan kurir untuk rute dan berat ini.
+        Tidak ada layanan kurir untuk rute dan paket ini.
       </p>
       <div
         v-else

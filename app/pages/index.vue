@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TourStep } from '~/components/app/AppTour.vue'
+
 definePageMeta({ refreshKeys: ['profile', 'shipments', 'orders', 'stats'] })
 
 const { data: profile } = useProfile()
@@ -7,6 +9,15 @@ const { data: orders, status: ordersStatus } = useOrders()
 
 // The home screen only teases the history; the riwayat page has the full list.
 const recentOrders = computed(() => orders.value.slice(0, 3))
+
+// Shown once to a new account: what each part of the home screen is for.
+const tourSteps: TourStep[] = [
+  { target: 'kirim', title: 'Kirim Paket', body: 'Mulai pengiriman di sini: pilih lokasi jemput dan tujuan, isi detail barang, lalu bandingkan tarif kurir.' },
+  { target: 'lacak', title: 'Lacak Pengiriman', body: 'Masukkan nomor resi untuk melihat posisi paket dan riwayat perjalanannya.' },
+  { target: 'alamat', title: 'Alamat Tersimpan', body: 'Simpan alamat yang sering dipakai supaya tidak perlu mengetik ulang setiap kali mengirim.' },
+  { target: 'aktif', title: 'Pengiriman Aktif', body: 'Paket yang sedang dalam perjalanan tampil di sini. Ketuk salah satunya untuk melihat statusnya.' },
+  { target: 'riwayat', title: 'Riwayat Pengiriman', body: 'Semua pesananmu, termasuk yang sudah selesai atau dibatalkan. Buka pesanan untuk mencetak resi atau mengirim lagi.' }
+]
 
 const salam = computed(() => {
   const jam = new Date().getHours()
@@ -44,11 +55,10 @@ const salam = computed(() => {
       <HomeQuickActions />
     </AppPageContent>
 
-    <AppPageContent class="mt-6">
-      <HomePartnerCarriers />
-    </AppPageContent>
-
-    <AppPageContent class="mt-6 mb-6">
+    <AppPageContent
+      class="mt-6 mb-6"
+      data-tour="aktif"
+    >
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-base font-bold text-gray-800">
           Pengiriman Aktif
@@ -115,7 +125,10 @@ const salam = computed(() => {
       </div>
     </AppPageContent>
 
-    <AppPageContent class="mb-6">
+    <AppPageContent
+      class="mb-6"
+      data-tour="riwayat"
+    >
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-base font-bold text-gray-800">
           Riwayat Pengiriman
@@ -166,5 +179,10 @@ const salam = computed(() => {
         </p>
       </div>
     </AppPageContent>
+
+    <AppTour
+      name="home-v1"
+      :steps="tourSteps"
+    />
   </div>
 </template>

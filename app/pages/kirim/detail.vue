@@ -14,8 +14,8 @@ const courier = computed(() => booking.selectedCourier)
 
 const pending = ref(false)
 
-// Creating an order calls RajaOngkir/Komship and books a real shipment at the
-// quoted tariff, so it is never queued — it waits for a live connection.
+// Creating an order calls Biteship and books a real shipment at the quoted
+// tariff, so it is never queued — it waits for a live connection.
 const online = useOnline()
 
 async function checkout() {
@@ -47,13 +47,10 @@ async function checkout() {
       body: {
         sender: booking.sender,
         receiver: booking.receiver,
-        originId: booking.origin!.id,
-        originLabel: booking.origin!.label,
-        destinationId: booking.destination!.id,
-        destinationLabel: booking.destination!.label,
+        origin: booking.origin,
+        destination: booking.destination,
         courierId: booking.selectedCourier!.id,
-        weightGram: booking.weightGram,
-        content: booking.content
+        items: booking.items
       }
     })
 
@@ -157,7 +154,7 @@ async function checkout() {
                 name="i-lucide-weight"
                 class="size-4"
               />
-              {{ booking.weight }} kg
+              {{ formatBerat(booking.weightGram) }}
             </span>
           </div>
 
@@ -173,10 +170,10 @@ async function checkout() {
                 Dijemput dari
               </p>
               <p class="mt-0.5 text-base font-bold text-gray-800">
-                {{ destinationTitle(booking.origin) }}
+                {{ areaTitle(booking.origin) }}
               </p>
               <p class="text-sm text-gray-500">
-                {{ destinationSubtitle(booking.origin) }}
+                {{ areaSubtitle(booking.origin) }}
               </p>
               <p
                 v-if="booking.sender.alamat"
@@ -199,10 +196,10 @@ async function checkout() {
                 Dikirim ke
               </p>
               <p class="mt-0.5 text-base font-bold text-gray-800">
-                {{ destinationTitle(booking.destination) }}
+                {{ areaTitle(booking.destination) }}
               </p>
               <p class="text-sm text-gray-500">
-                {{ destinationSubtitle(booking.destination) }}
+                {{ areaSubtitle(booking.destination) }}
               </p>
               <p
                 v-if="booking.receiver.alamat"
@@ -214,6 +211,24 @@ async function checkout() {
           </div>
         </div>
       </div>
+
+      <!-- Detail Pengirim + Detail Penerima, right under the route they belong to. -->
+      <KirimPartyDetailsSection
+        v-model="booking.sender"
+        title="Detail Pengirim"
+        :subtitle="areaTitle(booking.origin)"
+        :location="`${areaTitle(booking.origin)}, ${areaSubtitle(booking.origin)}`"
+        icon="i-lucide-user"
+        default-open
+      />
+      <KirimPartyDetailsSection
+        v-model="booking.receiver"
+        title="Detail Penerima"
+        :subtitle="areaTitle(booking.destination)"
+        :location="`${areaTitle(booking.destination)}, ${areaSubtitle(booking.destination)}`"
+        icon="i-lucide-user-check"
+        default-open
+      />
 
       <!-- Rincian Paket -->
       <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
@@ -228,38 +243,8 @@ async function checkout() {
             Rincian Paket
           </h3>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="relative col-span-2 overflow-hidden rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-4 text-white sm:col-span-1">
-            <div class="absolute -top-6 -right-6 size-24 rounded-full bg-white/5" />
-            <p class="flex items-center gap-1.5 text-xs font-semibold text-white/60">
-              <UIcon
-                name="i-lucide-weight"
-                class="size-3.5"
-              />
-              Berat paket
-            </p>
-            <p class="mt-1 text-3xl font-extrabold tabular-nums">
-              {{ booking.weight }} <span class="text-lg font-bold text-white/70">kg</span>
-            </p>
-            <p class="mt-1 text-xs text-white/60">
-              Ongkir dihitung dari berat ini
-            </p>
-          </div>
-          <div class="col-span-2 rounded-2xl bg-gray-50 p-4 sm:col-span-1">
-            <p class="flex items-center gap-1.5 text-xs font-semibold text-gray-400">
-              <UIcon
-                name="i-lucide-box"
-                class="size-3.5"
-              />
-              Isi paket
-            </p>
-            <p
-              class="mt-1 text-base font-bold leading-snug"
-              :class="booking.content ? 'text-gray-800' : 'text-gray-400'"
-            >
-              {{ booking.content || 'Belum diisi' }}
-            </p>
-          </div>
+        <AppPackageItems :items="booking.items" />
+        <div class="mt-3 grid grid-cols-2 gap-3">
           <div class="rounded-2xl bg-gray-50 p-4">
             <p class="flex items-center gap-1.5 text-xs font-semibold text-gray-400">
               <UIcon
@@ -284,42 +269,6 @@ async function checkout() {
               {{ formatEtd(courier.etd) }}
             </p>
           </div>
-        </div>
-      </div>
-
-      <!-- Detail Pengirim + Detail Penerima: the last thing to fill in, once
-           the price is known. -->
-      <KirimPartyDetailsSection
-        v-model="booking.sender"
-        title="Detail Pengirim"
-        :subtitle="destinationTitle(booking.origin)"
-        :location="destinationTitle(booking.origin)"
-        icon="i-lucide-user"
-        default-open
-      />
-      <KirimPartyDetailsSection
-        v-model="booking.receiver"
-        title="Detail Penerima"
-        :subtitle="destinationTitle(booking.destination)"
-        :location="destinationTitle(booking.destination)"
-        icon="i-lucide-user-check"
-        default-open
-      />
-
-      <div class="flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 p-4">
-        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white">
-          <UIcon
-            name="i-lucide-triangle-alert"
-            class="size-5"
-          />
-        </div>
-        <div>
-          <p class="text-sm font-bold text-red-700">
-            Pastikan berat sesuai
-          </p>
-          <p class="mt-0.5 text-sm text-red-700/80">
-            Bila member terbukti secara sengaja memanipulasi berat, akun kamu akan dinonaktifkan secara permanen.
-          </p>
         </div>
       </div>
 

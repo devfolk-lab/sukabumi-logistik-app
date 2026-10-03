@@ -1,56 +1,67 @@
 import type { Order, TrackingEvent } from '../generated/prisma/client'
+import type { OrderStage } from '#shared/types'
 import { prisma } from './prisma'
-import { trackWaybill } from './rajaongkir'
-import { orderDetail } from './komship'
-import { manifestDate } from './mappers'
+import { trackOrder } from './biteship'
+import { isDestinationSide, stageForStatus, statusTitle, toArea } from './mappers'
+
+/** Lifecycle order, so a late or repeated status never moves an order back. */
+const RANK: Record<OrderStage, number> = {
+  MENUNGGU_PEMBAYARAN: 0,
+  DIPROSES: 1,
+  DIJEMPUT: 2,
+  DALAM_PERJALANAN: 3,
+  SELESAI: 4,
+  BATAL: 5
+}
+
+function nextStage(current: OrderStage, status: string): OrderStage | null {
+  if (current === 'SELESAI' || current === 'BATAL') return null
+  const stage = stageForStatus(status)
+  if (!stage) return null
+  if (stage === 'BATAL') return stage
+  return RANK[stage] > RANK[current] ? stage : null
+}
 
 /**
- * Pulls the live manifest for an order's AWB and caches it. Tracking is a
+ * Pulls the live history for an order and caches it. Tracking is a
  * best-effort enrichment: a carrier outage must not break the detail page, so
  * failures fall back to whatever is already stored.
+ *
+ * Orders are tracked by Biteship `tracking_id`, which is free. An order
+ * without one was never booked on Biteship (seed data, or a pre-Biteship
+ * Komship sandbox AWB no carrier knows), so it is not looked up by waybill —
+ * that lookup is billed per call and could only fail.
  */
 export async function syncTracking(order: Order): Promise<TrackingEvent[]> {
-  let awb = order.awb
+  const tracking = order.biteshipTrackingId
+    ? await trackOrder(order.biteshipTrackingId).catch(() => null)
+    : null
 
-  // The carrier assigns the AWB some time after pickup is scheduled, so an
-  // order handed to Komship starts without one. Claim it on first sight.
-  if (!awb && order.komshipOrderNo) {
-    const detail = await orderDetail(order.komshipOrderNo).catch(() => null)
-
-    if (detail?.awb) {
-      awb = detail.awb
-      await prisma.order.update({ where: { id: order.id }, data: { awb } })
-    }
-  }
-
-  if (!awb) {
-    return prisma.trackingEvent.findMany({
-      where: { orderId: order.id },
-      orderBy: { occurredAt: 'asc' }
-    })
-  }
-
-  try {
-    const waybill = await trackWaybill(awb, order.courierCode)
-
-    const events = waybill.manifest.map(m => ({
+  if (tracking) {
+    const from = areaPlace(toArea(order.originArea))
+    const to = areaPlace(toArea(order.destinationArea))
+    const events = (tracking.history ?? []).map(h => ({
       orderId: order.id,
-      title: m.manifest_description,
-      location: m.city_name ?? null,
-      occurredAt: manifestDate(m.manifest_date, m.manifest_time)
+      title: statusTitle(h.status, h.note),
+      status: h.status.toLowerCase(),
+      note: h.note?.trim() || null,
+      location: isDestinationSide(h.status) ? to : from,
+      occurredAt: new Date(h.updated_at)
     }))
 
     if (events.length > 0) {
       await prisma.trackingEvent.createMany({ data: events, skipDuplicates: true })
     }
 
-    if (waybill.delivered && order.status !== 'SELESAI') {
-      await prisma.order.update({ where: { id: order.id }, data: { status: 'SELESAI' } })
-    } else if (!waybill.delivered && order.status === 'DIPROSES') {
-      await prisma.order.update({ where: { id: order.id }, data: { status: 'DALAM_PERJALANAN' } })
+    const stage = nextStage(order.status, tracking.status)
+    const awb = order.awb || tracking.waybill_id || null
+
+    if (stage || awb !== order.awb) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { ...(stage ? { status: stage } : {}), awb }
+      })
     }
-  } catch {
-    // Carrier unreachable or AWB not yet scanned — serve the cache.
   }
 
   return prisma.trackingEvent.findMany({

@@ -10,7 +10,7 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@vite-pwa/nuxt',
     '@pinia/nuxt',
-    '@nuxtjs/supabase'
+    'nuxt-nodemailer'
   ],
 
   // Client-only rendering: every screen is user-scoped and there is nothing
@@ -27,6 +27,11 @@ export default defineNuxtConfig({
   // — and the manifest link has to be in the document the browser loads for
   // the app to be installable.
   app: {
+    // A short fade between routes (styles in main.css). `out-in` so the old
+    // page never stacks above the new one and the scroll reset happens while
+    // nothing is on screen. Layout changes already animate through
+    // `animate-page-in` on each layout's wrapper.
+    pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       link: [
         { rel: 'manifest', href: '/manifest.webmanifest' }
@@ -49,19 +54,21 @@ export default defineNuxtConfig({
 
   spaLoadingTemplate: true,
 
+  // Server-only. `NUXT_BITESHIP_API_KEY` / `NUXT_BITESHIP_BASE_URL` override
+  // these at runtime; a `biteship_test.` key keeps every order simulated.
   runtimeConfig: {
-    // RajaOngkir API V2 (Komerce). The published path is /api/v1 despite the
-    // product being named V2 — there is no /api/v2.
-    rajaongkir: {
-      baseUrl: 'https://rajaongkir.komerce.id/api/v1',
-      shippingCostApiKey: '',
-      generalApiKey: ''
+    biteship: {
+      baseUrl: 'https://api.biteship.com',
+      apiKey: ''
     },
-    // Komship Delivery API. The general key is sandbox-only; swap the base URL
-    // to https://api.collaborator.komerce.id once a production key exists.
-    komship: {
-      baseUrl: 'https://api-sandbox.collaborator.komerce.id',
-      enabled: true
+    public: {
+      // Origin used in links inside account emails (`NUXT_PUBLIC_SITE_URL`).
+      // Configured rather than read from the request's Host header, which a
+      // caller can forge to point a reset link at their own site.
+      siteUrl: 'http://localhost:3000',
+      // WhatsApp number behind "Pusat Bantuan" (`NUXT_PUBLIC_HELP_WHATSAPP`),
+      // in international form without "+" (+62 811-1112-123 → 628111112123).
+      helpWhatsapp: '628111112123'
     }
   },
 
@@ -87,6 +94,21 @@ export default defineNuxtConfig({
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  // Gmail SMTP for `useNodeMailer()` in server routes. The module copies this
+  // into `runtimeConfig.nodemailer`, so only keys declared here can be
+  // overridden: `NUXT_NODEMAILER_AUTH_USER` / `NUXT_NODEMAILER_AUTH_PASS` (a
+  // Google app password, not the account password) and `NUXT_NODEMAILER_FROM`.
+  nodemailer: {
+    from: '',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: '',
+      pass: ''
     }
   },
 
@@ -145,8 +167,8 @@ export default defineNuxtConfig({
           }
         },
         {
-          // A static snapshot rebuilt by `pnpm build:destinations`, not
-          // per-request data.
+          // Biteship's kecamatan list barely changes, so an answer for a
+          // search term is good for weeks.
           urlPattern: /^\/api\/destinations/,
           handler: 'CacheFirst',
           options: {
@@ -166,20 +188,6 @@ export default defineNuxtConfig({
       enabled: true,
       type: 'module',
       suppressWarnings: true
-    }
-  },
-
-  supabase: {
-    url: process.env.NUXT_SUPABASE_URL,
-    key: process.env.NUXT_SUPABASE_KEY,
-    // Only Auth is used from Supabase; the schema belongs to Prisma, so there
-    // are no generated database types to point at.
-    types: false,
-    redirect: true,
-    redirectOptions: {
-      login: '/login',
-      callback: '/reset-password',
-      exclude: ['/login', '/register', '/lupa-password/**', '/reset-password/**']
     }
   }
 })

@@ -2,14 +2,6 @@
 import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
-
-const WEIGHT_STEP = 0.5
-const WEIGHT_MIN = 0.1
-
-function bump(delta: number) {
-  const next = Math.round(((booking.weight || 0) + delta) * 10) / 10
-  booking.weight = Math.max(WEIGHT_MIN, next)
-}
 </script>
 
 <template>
@@ -35,26 +27,10 @@ function bump(delta: number) {
             class="mt-2"
           />
           <AppDestinationSelect
-            v-model="booking.origin"
+            :model-value="booking.origin"
             class="mt-2.5"
+            @update:model-value="booking.setLocation('sender', $event)"
           />
-          <div
-            v-if="booking.origin"
-            class="mt-2 flex items-start gap-2 rounded-xl bg-primary-50 p-3 lg:hidden"
-          >
-            <UIcon
-              name="i-lucide-map-pin"
-              class="mt-0.5 size-4 shrink-0 text-primary"
-            />
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-primary">
-                {{ destinationTitle(booking.origin) }}
-              </p>
-              <p class="text-xs text-primary/70">
-                {{ destinationSubtitle(booking.origin) }}
-              </p>
-            </div>
-          </div>
         </div>
 
         <div class="flex flex-col items-center">
@@ -74,108 +50,57 @@ function bump(delta: number) {
             class="mt-2"
           />
           <AppDestinationSelect
-            v-model="booking.destination"
+            :model-value="booking.destination"
             class="mt-2.5"
+            @update:model-value="booking.setLocation('receiver', $event)"
           />
-          <div
-            v-if="booking.destination"
-            class="mt-2 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3 lg:hidden"
-          >
-            <UIcon
-              name="i-lucide-map-pin"
-              class="mt-0.5 size-4 shrink-0 text-amber-600"
-            />
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-amber-700">
-                {{ destinationTitle(booking.destination) }}
-              </p>
-              <p class="text-xs text-amber-700/70">
-                {{ destinationSubtitle(booking.destination) }}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Package Details -->
+    <!-- Package items -->
     <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
-      <div class="mb-4 flex items-center gap-2">
-        <div class="flex size-8 items-center justify-center rounded-xl bg-primary-50">
-          <UIcon
-            name="i-lucide-package"
-            class="size-4 text-primary"
-          />
-        </div>
-        <h3 class="text-base font-bold text-gray-800">
-          Detail Paket
-        </h3>
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label
-            for="berat"
-            class="text-sm font-semibold text-gray-700"
-          >Berat <span class="text-red-500">*</span></label>
-          <!-- The native number spinner used to sit on top of the unit, so the
-               spinner is hidden and the stepper is drawn as real buttons. -->
-          <div class="mt-1.5 flex items-stretch gap-2">
-            <button
-              v-ripple.dark
-              type="button"
-              class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200"
-              aria-label="Kurangi berat"
-              @click="bump(-WEIGHT_STEP)"
-            >
-              <UIcon
-                name="i-lucide-minus"
-                class="pointer-events-none size-4"
-              />
-            </button>
-            <UInput
-              id="berat"
-              v-model.number="booking.weight"
-              type="number"
-              step="0.1"
-              :min="WEIGHT_MIN"
-              placeholder="0.0"
-              size="xl"
-              inputmode="decimal"
-              class="min-w-0 flex-1"
-              :ui="{ base: 'text-center font-bold tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none' }"
-            >
-              <template #trailing>
-                <span class="text-sm font-bold text-gray-400">kg</span>
-              </template>
-            </UInput>
-            <button
-              v-ripple.dark
-              type="button"
-              class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200"
-              aria-label="Tambah berat"
-              @click="bump(WEIGHT_STEP)"
-            >
-              <UIcon
-                name="i-lucide-plus"
-                class="pointer-events-none size-4"
-              />
-            </button>
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <div class="flex size-8 items-center justify-center rounded-xl bg-primary-50">
+            <UIcon
+              name="i-lucide-package"
+              class="size-4 text-primary"
+            />
           </div>
+          <h3 class="text-base font-bold text-gray-800">
+            Detail Paket
+          </h3>
         </div>
-        <div>
-          <label
-            for="isi-paket"
-            class="text-sm font-semibold text-gray-700"
-          >Isi Paket</label>
-          <UTextarea
-            id="isi-paket"
-            v-model="booking.content"
-            placeholder="Apa isi paketnya?"
-            :rows="2"
-            size="xl"
-            class="mt-1.5 w-full"
+        <p class="text-sm text-gray-500">
+          <span class="font-bold text-gray-700">{{ booking.quantity }}</span> barang ·
+          <span class="font-bold text-gray-700">{{ formatBerat(booking.weightGram) }}</span>
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <KirimPackageItemForm
+          v-for="(item, index) in booking.items"
+          :key="index"
+          :model-value="item"
+          :index="index"
+          :removable="booking.items.length > 1"
+          @update:model-value="booking.items[index] = $event"
+          @remove="booking.removeItem(index)"
+        />
+
+        <button
+          v-ripple.dark
+          type="button"
+          class="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/30 bg-primary-50/50 py-3 text-base font-bold text-primary hover:border-primary/60"
+          @click="booking.addItem()"
+        >
+          <UIcon
+            name="i-lucide-plus"
+            class="pointer-events-none size-4"
           />
-        </div>
+          <span class="pointer-events-none">Tambah barang</span>
+        </button>
       </div>
     </div>
   </div>

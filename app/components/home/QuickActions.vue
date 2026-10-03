@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const actions = [
-  { label: 'Kirim Paket', to: '/kirim', icon: 'i-lucide-package', iconClass: 'bg-primary-50 text-primary' },
-  { label: 'Lacak Pengiriman', to: '/lacak', icon: 'i-lucide-map-pin', iconClass: 'bg-orange-50 text-orange-500' },
-  { label: 'Alamat Tersimpan', to: '/alamat', icon: 'i-lucide-house', iconClass: 'bg-purple-50 text-purple-500' }
+  { label: 'Kirim Paket', to: '/kirim', tour: 'kirim', icon: 'i-lucide-package', iconClass: 'bg-primary-50 text-primary' },
+  { label: 'Lacak Pengiriman', to: '/lacak', tour: 'lacak', icon: 'i-lucide-map-pin', iconClass: 'bg-orange-50 text-orange-500' },
+  { label: 'Alamat Tersimpan', to: '/alamat', tour: 'alamat', icon: 'i-lucide-house', iconClass: 'bg-purple-50 text-purple-500' }
 ]
 </script>
 
@@ -14,6 +14,7 @@ const actions = [
         :key="action.to"
         v-ripple.dark
         :to="action.to"
+        :data-tour="action.tour"
         class="flex w-20 flex-col items-center gap-2.5 rounded-2xl py-1 lg:w-auto lg:flex-row lg:justify-start lg:gap-3.5 lg:bg-white lg:px-5 lg:py-4 lg:shadow-card-flat lg:hover:-translate-y-[3px] lg:hover:shadow-card-hover"
       >
         <div

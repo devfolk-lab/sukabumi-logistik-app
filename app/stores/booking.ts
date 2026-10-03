@@ -1,15 +1,17 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import type { Address, Courier, Destination, Party, RoutePoint } from '~/types'
+import { computed, ref, watch } from 'vue'
+import type { Address, Area, Courier, Order, PackageItem, Party, RoutePoint } from '~/types'
 
 function emptyParty(): Party {
   return { nama: '', telp: '', alamat: '' }
 }
 
-function toPoint(destination: Destination | undefined): RoutePoint {
-  if (!destination) return { city: '', area: '' }
-  return { city: destination.city, area: destination.subdistrict }
+function toPoint(area: Area | undefined): RoutePoint {
+  if (!area) return { city: '', area: '' }
+  return { city: area.administrative_division_level_2_name, area: area.administrative_division_level_3_name }
 }
+
+export type BookingSide = 'sender' | 'receiver'
 
 /**
  * The kirim wizard spans three routes, so its draft is the one piece of state
@@ -17,27 +19,31 @@ function toPoint(destination: Destination | undefined): RoutePoint {
  * with `useAsyncData`.
  */
 export const useBookingStore = defineStore('booking', () => {
-  const origin = ref<Destination | undefined>()
-  const destination = ref<Destination | undefined>()
+  const origin = ref<Area | undefined>()
+  const destination = ref<Area | undefined>()
   const sender = ref<Party>(emptyParty())
   const receiver = ref<Party>(emptyParty())
   // Which saved address each side was filled from, so the chips can show it;
-  // null means the user is typing a custom one.
+  // null means the user picked or typed a location of their own.
   const senderAddressId = ref<string | null>(null)
   const receiverAddressId = ref<string | null>(null)
-  const weight = ref(1)
-  const content = ref('')
+  const items = ref<PackageItem[]>([emptyItem()])
   const selectedCourier = ref<Courier | null>(null)
 
   const pickup = computed(() => toPoint(origin.value))
   const delivery = computed(() => toPoint(destination.value))
-  const weightGram = computed(() => Math.max(100, Math.round((weight.value || 0) * 1000)))
+  const weightGram = computed(() => itemsWeight(items.value))
+  const quantity = computed(() => itemsQuantity(items.value))
 
   const hasRoute = computed(() => Boolean(origin.value && destination.value))
   const hasCourier = computed(() => Boolean(selectedCourier.value))
   const hasParties = computed(() =>
     Boolean(sender.value.nama.trim() && sender.value.telp.trim() && sender.value.alamat.trim()
       && receiver.value.nama.trim() && receiver.value.telp.trim() && receiver.value.alamat.trim())
+  )
+  /** The first thing still missing from the items, or `''`. */
+  const itemsProblem = computed(() =>
+    items.value.length ? items.value.map(itemProblem).find(Boolean) ?? '' : 'Tambahkan minimal satu barang.'
   )
 
   const ongkir = computed(() => selectedCourier.value?.cost ?? 0)
@@ -47,37 +53,58 @@ export const useBookingStore = defineStore('booking', () => {
     selectedCourier.value = courier
   }
 
-  /** Fills one side of the booking from a saved address (location + contact). */
-  function useAddress(side: 'sender' | 'receiver', address: Address): void {
-    const party = { nama: address.nama, telp: address.telp, alamat: address.alamat }
-    const location = address.destinationId
-      ? destinationFromLabel(address.destinationId, address.destinationLabel ?? '', address.zipCode)
-      : undefined
-
+  function setSide(side: BookingSide, party: Party, area: Area | undefined, addressId: string | null): void {
     if (side === 'sender') {
       sender.value = party
-      senderAddressId.value = address.id
-      if (location) origin.value = location
+      senderAddressId.value = addressId
+      origin.value = area
     } else {
       receiver.value = party
-      receiverAddressId.value = address.id
-      if (location) destination.value = location
+      receiverAddressId.value = addressId
+      destination.value = area
     }
+    // Rates are route-specific; any change of place invalidates the pick.
     selectedCourier.value = null
   }
 
-  /** Switches one side back to a hand-typed address. */
-  function useCustomAddress(side: 'sender' | 'receiver'): void {
-    if (side === 'sender') {
-      senderAddressId.value = null
-      origin.value = undefined
-      sender.value = emptyParty()
-    } else {
-      receiverAddressId.value = null
-      destination.value = undefined
-      receiver.value = emptyParty()
-    }
+  /** Fills one side of the booking from a saved address (location + contact). */
+  function useAddress(side: BookingSide, address: Address): void {
+    if (!address.area) return
+    setSide(side, { nama: address.nama, telp: address.telp, alamat: address.alamat }, address.area, address.id)
+  }
+
+  /**
+   * A kecamatan picked by hand. It no longer matches the saved address the
+   * side came from, so the street address is cleared; name and phone stay.
+   */
+  function setLocation(side: BookingSide, area: Area | undefined): void {
+    const current = side === 'sender' ? origin.value : destination.value
+    if (current?.id === area?.id) return
+
+    const party = side === 'sender' ? sender.value : receiver.value
+    const fromSaved = (side === 'sender' ? senderAddressId.value : receiverAddressId.value) !== null
+    setSide(side, fromSaved ? { ...party, alamat: '' } : party, area, null)
+  }
+
+  /** Starts a new booking over the same route and people as a past order. */
+  function repeatOrder(order: Order): void {
+    reset()
+    setSide('sender', { ...order.sender }, order.origin, null)
+    setSide('receiver', { ...order.receiver }, order.destination, null)
+  }
+
+  // A quote is for these exact items; editing any of them needs a new one.
+  watch(items, () => {
     selectedCourier.value = null
+  }, { deep: true })
+
+  function addItem(): void {
+    items.value.push(emptyItem())
+  }
+
+  function removeItem(index: number): void {
+    if (items.value.length <= 1) return
+    items.value.splice(index, 1)
   }
 
   function swapRoute(): void {
@@ -93,7 +120,6 @@ export const useBookingStore = defineStore('booking', () => {
     senderAddressId.value = receiverAddressId.value
     receiverAddressId.value = previousSenderAddressId
 
-    // Rates are route-specific; a swap invalidates the current pick.
     selectedCourier.value = null
   }
 
@@ -104,8 +130,7 @@ export const useBookingStore = defineStore('booking', () => {
     receiver.value = emptyParty()
     senderAddressId.value = null
     receiverAddressId.value = null
-    weight.value = 1
-    content.value = ''
+    items.value = [emptyItem()]
     selectedCourier.value = null
   }
 
@@ -116,20 +141,24 @@ export const useBookingStore = defineStore('booking', () => {
     receiver,
     senderAddressId,
     receiverAddressId,
-    weight,
+    items,
     weightGram,
-    content,
+    quantity,
     selectedCourier,
     pickup,
     delivery,
     hasRoute,
     hasCourier,
     hasParties,
+    itemsProblem,
     ongkir,
     total,
     selectCourier,
     useAddress,
-    useCustomAddress,
+    setLocation,
+    repeatOrder,
+    addItem,
+    removeItem,
     swapRoute,
     reset
   }

@@ -38,7 +38,7 @@ const FRESH_MS = 10_000
  */
 function persist(key: ApiKey, data: unknown, at: number): void {
   if (!import.meta.client) return
-  const userId = useSupabaseUser().value?.id
+  const userId = useAuthUser().value?.id
   if (!userId) return
   void idbPut<CachedEntry>(CACHE_STORE, { key, data, fetchedAt: at, userId })
 }
@@ -62,7 +62,10 @@ function useCached<T>(key: ApiKey, defaultValue?: () => T) {
   const request = useRequestFetch()
 
   async function fetchFresh(): Promise<T> {
-    const data = await (request(ENDPOINTS[key]) as Promise<T>)
+    const data = await (request(ENDPOINTS[key]) as Promise<T>).catch((error: unknown) => {
+      handleUnauthorized(error)
+      throw error
+    })
     const at = Date.now()
     fetchedAtState[key] = at
     persist(key, data, at)
@@ -79,7 +82,12 @@ function useCached<T>(key: ApiKey, defaultValue?: () => T) {
     return fetchFresh()
   }, {
     default: defaultValue as () => T,
-    getCachedData: (k, app) => app.payload.data[k] as T | undefined
+    // Nuxt 4 asks this on every execute, `refresh()` included. Serving the
+    // cached copy there would make a refresh after a mutation a no-op — a new
+    // address would not show until the next navigation — so only a mount
+    // reads it.
+    getCachedData: (k, app, { cause }) =>
+      cause === 'refresh:manual' || cause === 'refresh:hook' ? undefined : app.payload.data[k] as T | undefined
   })
 
   // Served from cache: revalidate quietly. Only one refetch per key at a time,
@@ -151,19 +159,18 @@ export function writeApiCache(key: ApiKey, data: unknown): void {
  * Seeds the payload from IndexedDB before the first page mounts, so a cold
  * start offline renders real data instead of skeletons that never resolve.
  *
- * Hydration is not gated on the Supabase session resolving first: plugin order
- * between modules is not guaranteed, and waiting would mean pages mount before
- * the seed lands. Entries carry the account they belong to, so a mismatch is
- * caught here and purged — and `clearApiCache()` already runs on every sign-in
- * and sign-out, so a mismatch only happens if a session was replaced out from
- * under us.
+ * `plugins/00.auth.client.ts` runs first, so the account is known here — from
+ * the server, or from the stored copy when the app starts offline. Entries
+ * carry the account they belong to, so a mismatch is caught here and purged —
+ * and `clearApiCache()` already runs on every sign-in and sign-out, so a
+ * mismatch only happens if a session was replaced out from under us.
  */
 export async function hydrateApiCache(): Promise<void> {
   const nuxtApp = useNuxtApp()
   const entries = await idbGetAll<CachedEntry>(CACHE_STORE)
   if (entries.length === 0) return
 
-  const currentId = useSupabaseUser().value?.id
+  const currentId = useAuthUser().value?.id
   const owner = entries[0]!.userId
 
   // Two accounts' data can never be mixed: if the stored owner is not the

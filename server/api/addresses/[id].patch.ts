@@ -3,15 +3,16 @@ import type { Address } from '#shared/types'
 import { requireProfile } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { toDomainAddress } from '../../utils/mappers'
+import { areaSchema } from '../../utils/schemas'
+import { Prisma } from '../../generated/prisma/client'
 
 const body = z.object({
   label: z.string().trim().min(1).max(40).optional(),
   nama: z.string().trim().min(1).max(120).optional(),
   telp: z.string().trim().min(1).max(30).optional(),
   alamat: z.string().trim().min(1).max(500).optional(),
-  destinationId: z.number().int().positive().nullish(),
-  destinationLabel: z.string().trim().max(200).nullish(),
-  zipCode: z.string().trim().max(10).nullish(),
+  /** Omitted keeps the current area; null clears it. */
+  area: areaSchema.nullish(),
   main: z.boolean().optional()
 })
 
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event): Promise<Address> => {
     throw createError({ statusCode: 404, statusMessage: 'Alamat tidak ditemukan' })
   }
 
-  const { main, ...rest } = input
+  const { main, area, ...rest } = input
 
   const updated = await prisma.$transaction(async (tx) => {
     if (main === true) {
@@ -33,7 +34,11 @@ export default defineEventHandler(async (event): Promise<Address> => {
     }
     return tx.address.update({
       where: { id },
-      data: { ...rest, ...(main === undefined ? {} : { isMain: main }) }
+      data: {
+        ...rest,
+        ...(area === undefined ? {} : { area: area ?? Prisma.DbNull }),
+        ...(main === undefined ? {} : { isMain: main })
+      }
     })
   })
 

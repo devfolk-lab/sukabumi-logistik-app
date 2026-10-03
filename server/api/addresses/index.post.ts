@@ -3,15 +3,15 @@ import type { Address } from '#shared/types'
 import { requireProfile } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { toDomainAddress } from '../../utils/mappers'
+import { areaSchema } from '../../utils/schemas'
+import { Prisma } from '../../generated/prisma/client'
 
 const body = z.object({
   label: z.string().trim().min(1).max(40),
   nama: z.string().trim().min(1, 'Nama wajib diisi').max(120),
   telp: z.string().trim().min(1, 'Nomor telepon wajib diisi').max(30),
   alamat: z.string().trim().min(1, 'Alamat wajib diisi').max(500),
-  destinationId: z.number().int().positive().nullish(),
-  destinationLabel: z.string().trim().max(200).nullish(),
-  zipCode: z.string().trim().max(10).nullish()
+  area: areaSchema.nullish()
 })
 
 export default defineEventHandler(async (event): Promise<Address> => {
@@ -27,9 +27,7 @@ export default defineEventHandler(async (event): Promise<Address> => {
       nama: input.nama,
       telp: input.telp,
       alamat: input.alamat,
-      destinationId: input.destinationId ?? null,
-      destinationLabel: input.destinationLabel ?? null,
-      zipCode: input.zipCode ?? null,
+      area: input.area ?? Prisma.DbNull,
       // The first address a user saves becomes their default.
       isMain: existing === 0
     }

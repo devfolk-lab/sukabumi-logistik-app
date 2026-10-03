@@ -1,7 +1,8 @@
 // Prisma schema for Sukabumi Logistik.
 //
-// Identity lives in Supabase's `auth` schema and is NOT managed here; `Profile.id`
-// mirrors `auth.users.id` and is created on first authenticated request.
+// Identity is ours: `User` holds the credentials, `Session` the signed-in
+// devices, `AuthToken` the emailed one-time links. `Profile` shares the user's
+// id and holds everything else about the account.
 
 generator client {
   provider = "prisma-client"
@@ -21,7 +22,64 @@ enum OrderStatus {
   BATAL
 }
 
+enum AuthTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+// Login credentials. Accounts created under Supabase Auth were imported with
+// their ids and hashes intact (migration 20261001090000_own_auth).
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  // Always stored lowercase.
+  email           String    @unique
+  // bcrypt, the scheme Supabase Auth used, so imported hashes still verify.
+  passwordHash    String
+  // Null until the confirmation link is opened; login is refused until then.
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile    Profile?
+  sessions   Session[]
+  authTokens AuthToken[]
+
+  @@map("users")
+}
+
+// One signed-in device. The cookie carries a random token; only its SHA-256
+// is stored, so a leaked table cannot be replayed as cookies.
+model Session {
+  id        String   @id
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// A single-use emailed link (confirm email, reset password). Stored as the
+// SHA-256 of the token, like sessions, and deleted once used.
+model AuthToken {
+  id        String        @id
+  userId    String        @db.Uuid
+  type      AuthTokenType
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("auth_tokens")
+}
+
 model Profile {
+  // Same value as `User.id`.
   id        String   @id @db.Uuid
   nama      String
   email     String
@@ -29,6 +87,7 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  user      User      @relation(fields: [id], references: [id], onDelete: Cascade)
   addresses Address[]
   orders    Order[]
 
@@ -43,11 +102,10 @@ model Address {
   telp      String
   alamat    String
 
-  // RajaOngkir V2 subdistrict, captured when the address is saved so orders
-  // placed from it do not need to re-resolve the destination.
-  destinationId    Int?
-  destinationLabel String?
-  zipCode          String?
+  // The Biteship area (kecamatan + postal code) exactly as `/v1/maps/areas`
+  // returned it, so orders placed from this address need no second lookup.
+  // Null for an address that has no kecamatan yet.
+  area Json?
 
   isMain    Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -75,14 +133,10 @@ model Order {
   receiverTelp   String
   receiverAlamat String
 
-  originId       Int
-  originLabel    String
-  originCity     String
-  originArea     String
-  destinationId  Int
-  destinationLabel String
-  destinationCity  String
-  destinationArea  String
+  // Biteship areas, verbatim as `/v1/maps/areas` returned them. Orders placed
+  // before the Biteship switch carry their old RajaOngkir id as `id`.
+  originArea      Json
+  destinationArea Json
 
   courierCode String
   courierName String
@@ -90,23 +144,29 @@ model Order {
   serviceName String
   etd         String?
 
+  // Sum of every item's weight × quantity, as quoted.
   weightGram Int
-  content    String
 
   // `total` equals `shippingCost` today; kept separate so surcharges can be
   // added later without rewriting history.
   shippingCost Int
   total        Int
 
-  // Set once the shipment is handed to the courier via Komship.
-  awb            String?
-  komshipOrderId String?
-  komshipOrderNo String?
+  // Demo payment: no gateway is involved; `paymentMethod` is always "DEMO".
+  paymentMethod String?
+  paidAt        DateTime?
+
+  // Set once the shipment is handed to the courier via Biteship.
+  awb                String?
+  biteshipOrderId    String?
+  biteshipTrackingId String?
+  trackingUrl        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   profile        Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  items          OrderItem[]
   trackingEvents TrackingEvent[]
 
   @@index([profileId, createdAt])
@@ -114,11 +174,40 @@ model Order {
   @@map("orders")
 }
 
+// One package line, with the fields Biteship takes in `items` on rates and
+// orders. Weight in grams, dimensions in centimetres, value in rupiah.
+model OrderItem {
+  id      String @id @default(uuid()) @db.Uuid
+  orderId String @db.Uuid
+  // Order the lines were entered in.
+  position Int
+
+  name        String
+  description String?
+  category    String?
+  sku         String?
+  value       Int
+  quantity    Int
+  weight      Int
+  length      Int?
+  width       Int?
+  height      Int?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
 model TrackingEvent {
   id      String @id @default(uuid()) @db.Uuid
   orderId String @db.Uuid
 
   title      String
+  /// Biteship's status code (`picked`, `in_transit`…), lowercase; picks the icon.
+  status     String?
+  /// Biteship's own note for the event, as the carrier wrote it.
+  note       String?
   location   String?
   occurredAt DateTime
 

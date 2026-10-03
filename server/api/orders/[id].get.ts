@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Order, Shipment } from '#shared/types'
 import { requireProfile } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
-import { toDomainOrder, toShipment } from '../../utils/mappers'
+import { ORDER_INCLUDE, toDomainOrder, toShipment } from '../../utils/mappers'
 import { syncTracking } from '../../utils/tracking'
 
 export default defineEventHandler(async (event): Promise<{ order: Order, shipment: Shipment }> => {
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event): Promise<{ order: Order, shipmen
   }
 
   const trackingEvents = await syncTracking(row)
-  const fresh = await prisma.order.findUniqueOrThrow({ where: { id: row.id } })
+  const fresh = await prisma.order.findUniqueOrThrow({ where: { id: row.id }, include: ORDER_INCLUDE })
 
   return {
     order: toDomainOrder(fresh),

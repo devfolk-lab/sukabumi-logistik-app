@@ -66,9 +66,7 @@ async function saveAddress(payload: AddressFormPayload) {
         nama: payload.nama,
         telp: payload.telp,
         alamat: payload.alamat,
-        destinationId: payload.destinationId,
-        destinationLabel: payload.destinationLabel,
-        zipCode: payload.zipCode
+        area: payload.area
       }
       writeApiCache('addresses', [...addresses.value, draft])
       await enqueue({
@@ -180,7 +178,7 @@ async function setMain(id: string) {
 
     <AppPageContent class="mt-5 space-y-4 pb-10">
       <div
-        v-if="status === 'pending' || status === 'idle'"
+        v-if="(status === 'pending' || status === 'idle') && !addresses.length"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton

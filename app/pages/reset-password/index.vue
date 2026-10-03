@@ -1,9 +1,30 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 
-const { updatePassword } = useAuthActions()
-const user = useSupabaseUser()
+const { checkResetLink, resetPassword } = useAuthActions()
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
+
+// The reset email links here with `?token=…`. The token is kept in memory and
+// sent with the new password; it is dropped from the address bar straight away
+// so it does not linger in history.
+const token = typeof route.query.token === 'string' ? route.query.token : ''
+const verifying = ref(Boolean(token))
+const linkValid = ref(false)
+const linkError = ref('')
+
+onMounted(async () => {
+  if (!token) return
+  try {
+    linkValid.value = await checkResetLink(token)
+  } catch (error) {
+    linkError.value = (error as Error).message
+  } finally {
+    verifying.value = false
+    await router.replace({ query: {} })
+  }
+})
 
 const pending = ref(false)
 const password = ref('')
@@ -16,7 +37,7 @@ const errors = computed(() => ({
 }))
 
 const canSubmit = computed(() =>
-  Boolean(user.value) && password.value.length >= 8 && password.value === confirm.value
+  !verifying.value && linkValid.value && password.value.length >= 8 && password.value === confirm.value
 )
 
 async function submit() {
@@ -24,7 +45,7 @@ async function submit() {
   pending.value = true
 
   try {
-    await updatePassword(password.value)
+    await resetPassword(token, password.value)
     await navigateTo('/reset-password/berhasil')
   } catch (error) {
     toast.add({
@@ -50,16 +71,26 @@ async function submit() {
       Buat password baru
     </h1>
     <p
-      v-if="user"
+      v-if="verifying"
+      class="mt-2 flex items-center justify-center gap-2 text-center text-sm text-gray-500"
+    >
+      <UIcon
+        name="i-lucide-loader-circle"
+        class="size-4 animate-spin"
+      />
+      Memeriksa link…
+    </p>
+    <p
+      v-else-if="linkValid"
       class="mt-2 text-center text-sm text-gray-500"
     >
-      Link magic kamu valid. Buat password baru untuk akun ini.
+      Link kamu valid. Buat password baru untuk akun ini.
     </p>
     <p
       v-else
       class="mt-2 text-center text-sm font-semibold text-red-500"
     >
-      Link ini sudah kedaluwarsa atau tidak valid.
+      {{ linkError || 'Link ini sudah kedaluwarsa atau tidak valid.' }}
       <NuxtLink
         to="/lupa-password"
         class="font-bold text-primary"

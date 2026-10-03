@@ -13,8 +13,8 @@ const courierItems = [
 
 /**
  * Looks the resi up before navigating so a typo shows here, under the field,
- * instead of landing on a dead detail page. Any J&T / Lion Parcel waybill
- * works, not only ones booked here — the lookup goes to RajaOngkir.
+ * instead of landing on a dead detail page. Any Lion Parcel waybill works,
+ * not only ones booked here — the lookup goes to Biteship.
  */
 async function search() {
   const resi = normalizeResi(input.value)

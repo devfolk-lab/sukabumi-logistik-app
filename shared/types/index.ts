@@ -10,19 +10,21 @@ export interface CourierBrand {
 }
 
 /**
- * One RajaOngkir rate row, passed through as the API returns it. Only `id`
- * and `brand` are ours; everything else is RajaOngkir's own value so what the
- * customer sees is exactly what the carrier quoted.
+ * One Biteship rate row. Only `id` and `brand` are ours; everything else is
+ * Biteship's own value so what the customer sees is exactly what was quoted.
  */
 export interface Courier {
-  /** `${code}:${service}` — unique per rate row, not per carrier. */
+  /** `${code}:${serviceCode}` — unique per rate row, not per carrier. */
   id: string
   code: string
   name: string
+  /** Biteship's `courier_service_name`, e.g. "Reg Pack". */
   service: string
+  /** Biteship's `courier_service_code`, e.g. "reg_pack" — what an order is booked with. */
+  serviceCode: string
   description: string
   cost: number
-  /** RajaOngkir's `etd` verbatim (e.g. "2-3 day", or "" when not provided). */
+  /** Biteship's `duration` verbatim (e.g. "2 - 3 days", or "" when not provided). */
   etd: string
   brand: CourierBrand
 }
@@ -32,15 +34,44 @@ export interface PartnerBadge {
   courierCode: string
 }
 
-/** A RajaOngkir V2 subdistrict, the unit both origin and destination use. */
-export interface Destination {
-  id: number
-  label: string
-  province: string
-  city: string
-  district: string
-  subdistrict: string
-  zipCode: string
+/**
+ * One Biteship area from `/v1/maps/areas`, key for key: a kecamatan with its
+ * postal code, e.g. "IDNP9IDNC421IDND5206IDZ43351". Addresses and orders store
+ * it verbatim, so what we keep is exactly what Biteship returned.
+ *
+ * Level 1 is the provinsi, level 2 the kota/kabupaten, level 3 the kecamatan.
+ */
+export interface Area {
+  id: string
+  /** "Cibadak, Sukabumi, Jawa Barat. 43351" */
+  name: string
+  country_name: string
+  country_code: string
+  administrative_division_level_1_name: string
+  administrative_division_level_1_type: string
+  administrative_division_level_2_name: string
+  administrative_division_level_2_type: string
+  administrative_division_level_3_name: string
+  administrative_division_level_3_type: string
+  postal_code: number
+}
+
+/**
+ * One package line, with the same fields Biteship takes in `items` on rates
+ * and orders. Weight is in grams, dimensions in centimetres, value in rupiah.
+ * Optional text is `''` and an unknown dimension is `null`.
+ */
+export interface PackageItem {
+  name: string
+  description: string
+  category: string
+  sku: string
+  value: number
+  quantity: number
+  weight: number
+  length: number | null
+  width: number | null
+  height: number | null
 }
 
 /** Persisted lifecycle stage, mirrors the Prisma `OrderStatus` enum. */
@@ -64,27 +95,42 @@ export interface Order {
   id: string
   /** Internal reference (SL-2026-8843); shown only when nothing better exists. */
   orderNo: string
-  /** Best public reference: carrier AWB, else Komship order number, else `orderNo`. */
+  /** Best public reference: carrier AWB, else `orderNo`. */
   resi: string
-  /** Komship's order number, once the shipment has been handed over. */
-  komshipOrderNo: string | null
+  /** Biteship's order id, once the shipment has been handed over. */
+  biteshipOrderId: string | null
   stage: OrderStage
   status: OrderStatus
   date: string
   pickup: string
   delivery: string
-  originLabel: string
-  destinationLabel: string
+  origin: Area
+  destination: Area
+  sender: Party
+  receiver: Party
   courier: string
   courierCode: string
+  /** Biteship's `courier_service_name`, e.g. "Reg Pack". */
+  service: string
   price: number
   weight: string
+  weightGram: number
+  /** Item names, for one-line summaries. */
   content: string
+  items: PackageItem[]
   awb: string | null
 }
 
 export interface TimelineStep {
   title: string
+  /**
+   * Biteship status code (`picked`, `in_transit`, `delivered`…), lowercase.
+   * Steps derived from our own order stage use `created` for the first one.
+   * Picks the step's icon; null when unknown.
+   */
+  status: string | null
+  /** The carrier's own note for this event, when it says more than the title. */
+  note?: string
   location: string
   time: string
   done: boolean
@@ -93,7 +139,7 @@ export interface TimelineStep {
 
 export interface Shipment {
   resi: string
-  /** Null for a waybill looked up straight from RajaOngkir with no order here. */
+  /** Null for a waybill looked up straight from Biteship with no order here. */
   orderId: string | null
   courier: string
   courierCode: string
@@ -105,6 +151,11 @@ export interface Shipment {
   status: string
   eta: string
   timeline: TimelineStep[]
+  /**
+   * True when `timeline` is the carrier's own history from Biteship; false
+   * when it is derived from our order stage because no history exists yet.
+   */
+  tracked: boolean
 }
 
 export interface Address {
@@ -114,9 +165,8 @@ export interface Address {
   nama: string
   telp: string
   alamat: string
-  destinationId: number | null
-  destinationLabel: string | null
-  zipCode: string | null
+  /** Null for an address saved before it had a kecamatan; it cannot price a route. */
+  area: Area | null
 }
 
 export interface Party {
@@ -129,6 +179,16 @@ export interface User {
   nama: string
   email: string
   telp: string | null
+}
+
+/**
+ * Who is signed in, as `/api/auth/session` reports it. The client keeps a copy
+ * so a cold start offline still knows whose cached data it may show.
+ */
+export interface SessionUser {
+  id: string
+  email: string
+  nama: string
 }
 
 export interface OrderStats {

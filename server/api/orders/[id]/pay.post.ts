@@ -2,21 +2,32 @@ import { z } from 'zod'
 import type { Order } from '#shared/types'
 import { requireProfile } from '../../../utils/auth'
 import { prisma } from '../../../utils/prisma'
-import { toDomainOrder } from '../../../utils/mappers'
-import { orderDetail, requestPickup, storeOrder } from '../../../utils/komship'
+import { ORDER_INCLUDE, toArea, toDomainOrder } from '../../../utils/mappers'
+import { createOrder } from '../../../utils/biteship'
 
 /**
- * Confirms payment and hands the shipment to the carrier.
+ * Recorded as the payment method: checkout collects none, because payment is
+ * a demo run by us — no gateway is called and no money moves.
+ */
+const DEMO_PAYMENT = 'DEMO'
+
+/**
+ * Confirms a demo payment and hands the shipment to the courier via Biteship.
+ * Everything Biteship needs beyond the checkout form (shipper email,
+ * delivery type) is filled in here and in `createOrder`; the items go over
+ * exactly as the customer entered them.
  *
- * The Komship handoff is best-effort: the sandbox rejects orders when the
- * account balance is short, and a payment must not be lost because of that.
- * The order still advances to DIPROSES and can be retried.
+ * Because the payment is simulated there
+ * is nothing to lose by failing the whole request when Biteship refuses the
+ * order: the order stays MENUNGGU_PEMBAYARAN and the customer can pay again.
+ * Biteship refuses a second booking under the same order number, so a retry
+ * after a half-finished attempt fails with 409 instead of sending two couriers.
  */
 export default defineEventHandler(async (event): Promise<Order> => {
   const profile = await requireProfile(event)
   const id = z.uuid().parse(getRouterParam(event, 'id'))
 
-  const order = await prisma.order.findFirst({ where: { id, profileId: profile.id } })
+  const order = await prisma.order.findFirst({ where: { id, profileId: profile.id }, include: ORDER_INCLUDE })
 
   if (!order) {
     throw createError({ statusCode: 404, statusMessage: 'Pesanan tidak ditemukan' })
@@ -26,61 +37,33 @@ export default defineEventHandler(async (event): Promise<Order> => {
     throw createError({ statusCode: 409, statusMessage: 'Pesanan ini sudah dibayar' })
   }
 
-  let komship: { orderId: string, orderNo: string } | null = null
-  let awb: string | null = null
-
-  if (useRuntimeConfig().komship.enabled) {
-    komship = await storeOrder({
-      orderNo: order.orderNo,
-      senderNama: order.senderNama,
-      senderTelp: order.senderTelp,
-      senderEmail: profile.email,
-      senderAlamat: order.senderAlamat,
-      originId: order.originId,
-      receiverNama: order.receiverNama,
-      receiverTelp: order.receiverTelp,
-      receiverAlamat: order.receiverAlamat,
-      destinationId: order.destinationId,
-      courierCode: order.courierCode,
-      serviceCode: order.serviceCode,
-      shippingCost: order.shippingCost,
-      total: order.total,
-      weightGram: order.weightGram,
-      content: order.content
-    }).catch((error) => {
-      // Never lose a payment over a carrier outage, but do not lose the reason
-      // either - these orders need a manual retry.
-      console.error(`[komship] handoff failed for ${order.orderNo}:`, error?.statusMessage || error?.message || error)
-      return null
-    })
-
-    if (komship) {
-      // Ask for a pickup tomorrow; regular services are not collected same-day.
-      const besok = new Date()
-      besok.setDate(besok.getDate() + 1)
-      const pickup = await requestPickup(komship.orderNo, besok.toISOString().slice(0, 10)).catch((error) => {
-        console.error(`[komship] pickup request failed for ${order.orderNo}:`, error?.statusMessage || error?.message || error)
-        return null
-      })
-
-      // The carrier assigns the AWB asynchronously, so it is often still empty
-      // here; `syncTracking` picks it up on the next detail view.
-      awb = pickup?.awb || null
-
-      if (!awb) {
-        const detail = await orderDetail(komship.orderNo).catch(() => null)
-        awb = detail?.awb || null
-      }
-    }
-  }
+  const shipment = await createOrder({
+    orderNo: order.orderNo,
+    senderNama: order.senderNama,
+    senderTelp: order.senderTelp,
+    senderEmail: profile.email,
+    senderAlamat: order.senderAlamat,
+    originAreaId: toArea(order.originArea).id,
+    receiverNama: order.receiverNama,
+    receiverTelp: order.receiverTelp,
+    receiverAlamat: order.receiverAlamat,
+    destinationAreaId: toArea(order.destinationArea).id,
+    courierCode: order.courierCode,
+    serviceCode: order.serviceCode,
+    items: toDomainOrder(order).items
+  })
 
   const updated = await prisma.order.update({
     where: { id: order.id },
+    include: ORDER_INCLUDE,
     data: {
       status: 'DIPROSES',
-      komshipOrderId: komship?.orderId ?? null,
-      komshipOrderNo: komship?.orderNo ?? null,
-      awb
+      paymentMethod: DEMO_PAYMENT,
+      paidAt: new Date(),
+      biteshipOrderId: shipment.id,
+      biteshipTrackingId: shipment.courier.tracking_id,
+      trackingUrl: shipment.courier.link,
+      awb: shipment.courier.waybill_id
     }
   })
 

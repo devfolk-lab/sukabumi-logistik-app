@@ -2,8 +2,9 @@ import { z } from 'zod'
 import type { Order } from '#shared/types'
 import { requireProfile } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
-import { calculateCost } from '../../utils/rajaongkir'
-import { generateOrderNo, splitDestination, toDomainOrder } from '../../utils/mappers'
+import { getRates } from '../../utils/biteship'
+import { ORDER_INCLUDE, generateOrderNo, toDomainOrder } from '../../utils/mappers'
+import { areaSchema, itemsSchema } from '../../utils/schemas'
 
 const party = z.object({
   nama: z.string().trim().min(1, 'Nama wajib diisi').max(120),
@@ -14,14 +15,11 @@ const party = z.object({
 const body = z.object({
   sender: party,
   receiver: party,
-  originId: z.number().int().positive(),
-  originLabel: z.string().trim().min(1),
-  destinationId: z.number().int().positive(),
-  destinationLabel: z.string().trim().min(1),
+  origin: areaSchema,
+  destination: areaSchema,
   /** `${courierCode}:${serviceCode}` as returned by /api/couriers/rates. */
   courierId: z.string().trim().regex(/^[a-z0-9]+:.+$/i, 'Kurir tidak valid'),
-  weightGram: z.number().int().min(100).max(150000),
-  content: z.string().trim().max(300).default('')
+  items: itemsSchema
 })
 
 export default defineEventHandler(async (event): Promise<Order> => {
@@ -29,14 +27,16 @@ export default defineEventHandler(async (event): Promise<Order> => {
   const input = await readValidatedBody(event, body.parse)
 
   // Re-price server-side: the client must not be able to name its own ongkir.
-  const rates = await calculateCost({
-    origin: input.originId,
-    destination: input.destinationId,
-    weight: input.weightGram,
+  const rates = await getRates({
+    originAreaId: input.origin.id,
+    destinationAreaId: input.destination.id,
+    items: input.items,
     couriers: ALLOWED_COURIERS
   })
 
-  const rate = rates.find(r => isAllowedCourier(r.code) && `${r.code}:${r.service}` === input.courierId)
+  const rate = rates.find(r =>
+    isAllowedCourier(r.courier_code) && `${r.courier_code}:${r.courier_service_code}` === input.courierId
+  )
 
   if (!rate) {
     throw createError({
@@ -44,9 +44,6 @@ export default defineEventHandler(async (event): Promise<Order> => {
       statusMessage: 'Layanan kurir sudah tidak tersedia, silakan pilih ulang'
     })
   }
-
-  const origin = splitDestination(input.originLabel)
-  const destination = splitDestination(input.destinationLabel)
 
   const created = await prisma.order.create({
     data: {
@@ -58,25 +55,35 @@ export default defineEventHandler(async (event): Promise<Order> => {
       receiverNama: input.receiver.nama,
       receiverTelp: input.receiver.telp,
       receiverAlamat: input.receiver.alamat,
-      originId: input.originId,
-      originLabel: input.originLabel,
-      originCity: origin.city,
-      originArea: origin.area,
-      destinationId: input.destinationId,
-      destinationLabel: input.destinationLabel,
-      destinationCity: destination.city,
-      destinationArea: destination.area,
-      // RajaOngkir's own values, stored verbatim so the record matches the quote.
-      courierCode: rate.code,
-      courierName: rate.name,
-      serviceCode: rate.service,
-      serviceName: rate.description,
-      etd: rate.etd || null,
-      weightGram: input.weightGram,
-      content: input.content,
-      shippingCost: rate.cost,
-      total: rate.cost
-    }
+      originArea: input.origin,
+      destinationArea: input.destination,
+      // Biteship's own values, stored verbatim so the record matches the quote
+      // and the handoff can book exactly this service.
+      courierCode: rate.courier_code,
+      courierName: courierLabel(rate.courier_code, rate.courier_name),
+      serviceCode: rate.courier_service_code,
+      serviceName: rate.courier_service_name,
+      etd: rate.duration || null,
+      weightGram: itemsWeight(input.items),
+      shippingCost: rate.price,
+      total: rate.price,
+      items: {
+        create: input.items.map((item, position) => ({
+          position,
+          name: item.name,
+          description: item.description || null,
+          category: item.category || null,
+          sku: item.sku || null,
+          value: item.value,
+          quantity: item.quantity,
+          weight: item.weight,
+          length: item.length,
+          width: item.width,
+          height: item.height
+        }))
+      }
+    },
+    include: ORDER_INCLUDE
   })
 
   setResponseStatus(event, 201)

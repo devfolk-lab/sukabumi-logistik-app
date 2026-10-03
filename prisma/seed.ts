@@ -6,9 +6,9 @@ import { addressData, orderData, seedAccounts } from './seed/fixtures.js'
 /**
  * Seeds a working login plus enough demo data to exercise every screen.
  *
- * Run with `pnpm db:seed`. Identity goes straight into Supabase's `auth` schema
- * (see `prisma/seed/auth.ts` for why), and everything under `public` is rebuilt
- * from `prisma/seed/fixtures.ts`.
+ * Run with `pnpm db:seed`. Logins go into `users`, already confirmed (see
+ * `prisma/seed/auth.ts`), and each account's data is rebuilt from
+ * `prisma/seed/fixtures.ts`.
  *
  * Re-running is safe and idempotent: each seeded account's addresses and orders
  * are dropped and recreated, so timestamps stay fresh. It only ever touches the
@@ -29,8 +29,8 @@ async function main(): Promise<void> {
 
   try {
     for (const account of accounts) {
-      // `auth.users` first: `Profile.id` mirrors whatever id ends up owning the
-      // email, which is not necessarily the one the fixture asked for.
+      // `users` first: `Profile.id` is whatever id ends up owning the email,
+      // which is not necessarily the one the fixture asked for.
       const id = await upsertAuthUser(prisma, account)
 
       await prisma.profile.upsert({
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
         await prisma.order.create({ data: { profileId: id, ...orderData(account, order) } })
       }
 
-      await verifyPasswordLogin(account.email, account.password)
+      await verifyPasswordLogin(prisma, account.email, account.password)
 
       console.log(
         `✓ ${account.email} — ${account.addresses.length} alamat, ${account.orders.length} pesanan`

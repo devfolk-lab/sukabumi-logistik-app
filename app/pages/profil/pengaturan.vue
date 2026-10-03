@@ -125,7 +125,7 @@ async function savePassword() {
   savingPassword.value = true
 
   try {
-    await changePassword(profile.value.email, pw.current, pw.next)
+    await changePassword(pw.current, pw.next)
     pw.current = ''
     pw.next = ''
     pw.confirm = ''

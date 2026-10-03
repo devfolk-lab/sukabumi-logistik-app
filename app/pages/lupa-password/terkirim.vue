@@ -1,13 +1,24 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 
+const { sendResetLink } = useAuthActions()
 const resetEmail = useState<string>('resetEmail', () => '')
 const toast = useToast()
 
 const displayEmail = computed(() => resetEmail.value || 'email kamu')
+const pending = ref(false)
 
-function resendEmail() {
-  toast.add({ title: 'Email berhasil dikirim ulang.' })
+async function resendEmail() {
+  if (!resetEmail.value || pending.value) return
+  pending.value = true
+  try {
+    await sendResetLink(resetEmail.value)
+    toast.add({ title: 'Email berhasil dikirim ulang.', description: `Cek kotak masuk ${resetEmail.value}.` })
+  } catch (error) {
+    toast.add({ title: 'Gagal mengirim ulang', description: (error as Error).message, color: 'error' })
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -23,7 +34,7 @@ function resendEmail() {
       Cek email kamu
     </h1>
     <p class="mt-2 text-center text-sm text-gray-500">
-      Kami sudah mengirimkan link masuk ke <span class="font-bold text-gray-700">{{ displayEmail }}</span>. Klik link tersebut untuk melanjutkan mengatur ulang password.
+      Jika <span class="font-bold text-gray-700">{{ displayEmail }}</span> terdaftar, kami sudah mengirimkan link untuk mengatur ulang password. Klik link tersebut untuk membuat password baru.
     </p>
 
     <div class="mt-6 flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-3.5">
@@ -32,39 +43,23 @@ function resendEmail() {
         class="mt-0.5 size-4 shrink-0 text-blue-600"
       />
       <p class="text-sm text-blue-800">
-        Link berlaku selama 15 menit. Tidak menerima email? Cek folder spam, atau kirim ulang di bawah ini.
+        Tidak menerima email? Cek folder spam atau promosi, atau kirim ulang di bawah ini.
       </p>
     </div>
 
     <UButton
+      v-if="resetEmail"
       v-ripple.dark
       color="neutral"
       variant="outline"
       size="xl"
       block
       class="mt-6 font-bold"
+      :loading="pending"
       @click="resendEmail"
     >
       Kirim Ulang Email
     </UButton>
-
-    <div class="mt-4 rounded-2xl border border-secondary/20 bg-secondary-50 p-4">
-      <p class="text-sm font-bold uppercase tracking-wide text-secondary">
-        Mode Demo
-      </p>
-      <p class="mt-1 text-sm text-gray-600">
-        Karena ini prototipe, gunakan tombol di bawah untuk mensimulasikan link magic yang seharusnya kamu buka dari email.
-      </p>
-      <UButton
-        v-ripple
-        to="/reset-password"
-        size="xl"
-        block
-        class="mt-3 font-bold"
-      >
-        Buka Link Magic (Simulasi)
-      </UButton>
-    </div>
 
     <p class="mt-6 text-center text-sm text-gray-500">
       <NuxtLink

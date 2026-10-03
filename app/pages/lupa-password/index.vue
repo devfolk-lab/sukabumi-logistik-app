@@ -45,7 +45,7 @@ async function sendMagicLink() {
       Lupa password?
     </h1>
     <p class="mt-1.5 text-sm text-gray-500">
-      Masukkan email akun kamu, kami akan kirimkan link masuk (magic link) untuk mengatur ulang password.
+      Masukkan email akun kamu, kami akan kirimkan link untuk mengatur ulang password.
     </p>
 
     <form
@@ -71,7 +71,7 @@ async function sendMagicLink() {
         class="font-bold"
         :loading="pending"
       >
-        Kirim Link Masuk
+        Kirim Link Reset Password
       </UButton>
     </form>
 
