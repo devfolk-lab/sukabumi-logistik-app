@@ -14,8 +14,9 @@ const courier = computed(() => booking.selectedCourier)
 
 const pending = ref(false)
 
-// Creating an order calls Biteship and books a real shipment at the quoted
-// tariff, so it is never queued — it waits for a live connection.
+// Creating an order re-prices on Biteship and opens a draft there at that
+// tariff, so it is never queued — it waits for a live connection. Payment
+// happens afterwards, from the order's own page.
 const online = useOnline()
 
 async function checkout() {
@@ -54,17 +55,15 @@ async function checkout() {
       }
     })
 
-    const paid = await $fetch<Order>(`/api/orders/${order.id}/pay`, { method: 'POST' })
-
     booking.reset()
     await invalidateApiData(['orders', 'shipments', 'stats'])
 
     toast.add({
       title: 'Pesanan dibuat',
-      description: `Nomor pesanan ${paid.resi}.`
+      description: 'Ketuk Bayar untuk melihat cara pembayaran.'
     })
 
-    await navigateTo(`/riwayat/${order.id}`)
+    await navigateTo(`/riwayat/${order.id}`, { replace: true })
   } catch (error) {
     toast.add({
       title: 'Gagal membuat pesanan',
@@ -100,7 +99,7 @@ async function checkout() {
             Detail Pesanan
           </h1>
           <p class="text-sm text-white/60">
-            Lengkapi data sebelum bayar
+            Lengkapi data sebelum membuat pesanan
           </p>
         </div>
       </div>
@@ -316,7 +315,7 @@ async function checkout() {
           class="absolute inset-0 rounded-2xl"
         />
         <span class="relative z-10 pointer-events-none">
-          {{ !online ? 'Butuh koneksi internet' : pending ? 'Memproses...' : `Bayar ${formatRupiah(booking.total)}` }}
+          {{ !online ? 'Butuh koneksi internet' : pending ? 'Membuat pesanan...' : `Buat Pesanan · ${formatRupiah(booking.total)}` }}
         </span>
       </button>
     </AppStickyBar>

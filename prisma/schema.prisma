@@ -152,11 +152,17 @@ model Order {
   shippingCost Int
   total        Int
 
-  // Demo payment: no gateway is involved; `paymentMethod` is always "DEMO".
+  // Paid by manual bank transfer: an admin checks the transfer and confirms
+  // the Biteship draft order, and the app records that as "TRANSFER". Orders
+  // from the earlier demo checkout carry "DEMO".
   paymentMethod String?
   paidAt        DateTime?
 
-  // Set once the shipment is handed to the courier via Biteship.
+  // Biteship draft order created with the order. It holds the booking without
+  // a courier or waybill until an admin confirms it in the Biteship dashboard.
+  biteshipDraftId String? @unique
+
+  // Set once the draft is confirmed and Biteship has booked the courier.
   awb                String?
   biteshipOrderId    String?
   biteshipTrackingId String?

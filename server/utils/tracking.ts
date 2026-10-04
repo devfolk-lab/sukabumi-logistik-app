@@ -1,7 +1,7 @@
 import type { Order, TrackingEvent } from '../generated/prisma/client'
 import type { OrderStage } from '#shared/types'
 import { prisma } from './prisma'
-import { trackOrder } from './biteship'
+import { getOrder, trackOrder } from './biteship'
 import { isDestinationSide, stageForStatus, statusTitle, toArea } from './mappers'
 
 /** Lifecycle order, so a late or repeated status never moves an order back. */
@@ -33,6 +33,22 @@ function nextStage(current: OrderStage, status: string): OrderStage | null {
  * that lookup is billed per call and could only fail.
  */
 export async function syncTracking(order: Order): Promise<TrackingEvent[]> {
+  // A confirmed draft records the booked order before its tracking id is
+  // known if that lookup failed at the time; fetch it now.
+  if (order.biteshipOrderId && !order.biteshipTrackingId) {
+    const booked = await getOrder(order.biteshipOrderId).catch(() => null)
+    if (booked?.courier.tracking_id) {
+      order = await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          biteshipTrackingId: booked.courier.tracking_id,
+          trackingUrl: booked.courier.link,
+          awb: order.awb || booked.courier.waybill_id
+        }
+      })
+    }
+  }
+
   const tracking = order.biteshipTrackingId
     ? await trackOrder(order.biteshipTrackingId).catch(() => null)
     : null

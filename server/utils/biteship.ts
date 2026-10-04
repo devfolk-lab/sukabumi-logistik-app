@@ -1,12 +1,13 @@
 import type { Area, PackageItem } from '#shared/types'
 
 /**
- * Biteship API — area search, rates, order handoff and tracking. The key's
- * prefix decides the environment: `biteship_test.` creates orders that no
- * courier ever collects and returns placeholder waybills (`WYB-…`).
+ * Biteship API — area search, rates, draft orders, order lookup and
+ * tracking. The key's prefix decides the environment: `biteship_test.`
+ * creates orders that no courier ever collects and returns placeholder
+ * waybills (`WYB-…`).
  *
  * Rates and public waybill tracking are billed per call and refused outright
- * while the account balance is empty, even with a test key. Order creation,
+ * while the account balance is empty, even with a test key. Draft orders,
  * order lookup, tracking by `tracking_id` and cancellation are not.
  */
 
@@ -46,6 +47,19 @@ export interface RawOrder {
     link: string | null
     history?: RawHistory[]
   }
+}
+
+/** A held booking: no courier is called and no waybill exists until confirmed. */
+export interface RawDraftOrder {
+  id: string
+  /** `placed` (incomplete), `ready` (confirmable) or `confirmed`. */
+  status: string
+  /** The real order's id, once the draft has been confirmed. */
+  order_id: string | null
+  reference_id: string | null
+  price: number
+  confirmed_at: string | null
+  deleted_at: string | null
 }
 
 export interface RawTracking {
@@ -154,12 +168,28 @@ export async function searchAreas(input: string, limit = 20): Promise<Area[]> {
   }))
 }
 
+/**
+ * Our form's categories in the values Biteship documents for `items.category`.
+ * Ours are worded for the customer; the ones with no Biteship match go as
+ * `others`, which is also Biteship's default.
+ */
+const BITESHIP_CATEGORY: Record<string, string> = {
+  fashion: 'fashion',
+  electronic: 'electronic',
+  food: 'food_and_drink',
+  beauty: 'beauty',
+  health: 'healthcare',
+  household: 'home_accessories',
+  hobby: 'hobby',
+  automotive: 'sparepart'
+}
+
 /** Biteship's `items` shape; optional fields are left out rather than sent empty. */
 function toBiteshipItems(items: readonly PackageItem[]) {
   return items.map(item => ({
     name: item.name,
     ...(item.description ? { description: item.description } : {}),
-    ...(item.category ? { category: item.category } : {}),
+    category: BITESHIP_CATEGORY[item.category] ?? 'others',
     ...(item.sku ? { sku: item.sku } : {}),
     value: item.value,
     quantity: item.quantity,
@@ -214,17 +244,18 @@ export interface CreateOrderInput {
 const DUPLICATE_REFERENCE = 40002060
 
 /**
- * Hands the shipment to the courier. The waybill comes back immediately, and
- * `delivery_type: 'now'` asks for pickup as soon as the courier can.
+ * Holds the shipment as a draft order. Nothing is booked and nothing is
+ * charged: an admin confirms the draft in the Biteship dashboard once the
+ * customer's transfer has been checked, and only then does Biteship call the
+ * courier and issue a waybill. Sending the courier makes the draft `ready`,
+ * the one status the dashboard can confirm.
  *
- * `reference_id` guards against booking twice: if a previous attempt reached
- * Biteship but our database write failed, the retry is refused rather than
- * sending a second courier. That order then needs a manual check, since the
- * refusal does not name the existing Biteship order.
+ * `reference_id` is our order number, so the admin can find the draft by the
+ * number the customer sends on WhatsApp, and the confirmed order carries it too.
  */
-export async function createOrder(input: CreateOrderInput): Promise<RawOrder> {
+export async function createDraftOrder(input: CreateOrderInput): Promise<RawDraftOrder> {
   try {
-    return await call<RawOrder>('/v1/orders', {
+    return await call<RawDraftOrder>('/v1/draft_orders', {
       method: 'POST',
       body: {
         shipper_contact_name: input.senderNama,
@@ -250,14 +281,23 @@ export async function createOrder(input: CreateOrderInput): Promise<RawOrder> {
     })
   } catch (error) {
     if (error instanceof BiteshipError && error.code === DUPLICATE_REFERENCE) {
-      console.error(`[biteship] ${input.orderNo} was already booked; needs a manual check`)
+      console.error(`[biteship] ${input.orderNo} already has a draft; needs a manual check`)
       throw createError({
         statusCode: 409,
-        statusMessage: 'Pesanan ini sudah pernah diserahkan ke kurir. Hubungi admin untuk pengecekan.'
+        statusMessage: 'Pesanan ini sudah pernah dibuat di sistem kurir. Hubungi admin untuk pengecekan.'
       })
     }
-    throw biteshipFailure(error, 'Gagal menyerahkan paket ke kurir')
+    throw biteshipFailure(error, 'Gagal membuat pesanan di sistem kurir')
   }
+}
+
+export async function getDraftOrder(id: string): Promise<RawDraftOrder> {
+  return call<RawDraftOrder>(`/v1/draft_orders/${encodeURIComponent(id)}`)
+}
+
+/** Only an unconfirmed draft can be deleted; Biteship refuses a confirmed one. */
+export async function deleteDraftOrder(id: string): Promise<void> {
+  await call(`/v1/draft_orders/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export async function getOrder(id: string): Promise<RawOrder> {

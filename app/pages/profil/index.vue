@@ -15,13 +15,8 @@ const tiles = computed(() => [
   { label: 'Dibatalkan', value: stats.value?.batal ?? 0, icon: 'i-lucide-triangle-alert', bg: 'bg-red-50', text: 'text-red-500' }
 ])
 
-// Pusat Bantuan is a WhatsApp chat with the team, opened with a greeting
-// already typed. `wa.me` hands off to the app on a phone and to WhatsApp Web
-// elsewhere.
-const helpNumber = String(useRuntimeConfig().public.helpWhatsapp ?? '').replace(/\D/g, '')
-const helpUrl = helpNumber
-  ? `https://wa.me/${helpNumber}?text=${encodeURIComponent('Halo Sukabumi Logistik, saya butuh bantuan.')}`
-  : undefined
+// Pusat Bantuan is a WhatsApp chat with the team, opened with a greeting.
+const helpUrl = useWhatsappChat().url('Halo Sukabumi Logistik, saya butuh bantuan.')
 const toast = useToast()
 
 function helpUnavailable() {

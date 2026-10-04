@@ -87,6 +87,8 @@ export function toDomainOrder(o: OrderWithItems): DomainOrder {
     orderNo: o.orderNo,
     resi: publicReference(o),
     biteshipOrderId: o.biteshipOrderId,
+    draftId: o.biteshipDraftId,
+    paidAt: o.paidAt ? formatWaktu(o.paidAt) : null,
     stage: o.status,
     status: stageToStatus(o.status),
     date: formatTanggal(o.createdAt),

@@ -23,7 +23,8 @@ registerPageRefresh(async () => {
   await invalidateApiData(['orders', 'shipments', 'stats'])
 })
 
-const loading = computed(() => status.value === 'pending' || status.value === 'idle')
+// Only the first load shows skeletons; a refresh keeps the page on screen.
+const loading = computed(() => (status.value === 'pending' || status.value === 'idle') && !data.value)
 const order = computed(() => data.value?.order)
 const shipment = computed(() => data.value?.shipment)
 
@@ -38,7 +39,7 @@ const belumBayar = computed(() => order.value?.stage === 'MENUNGGU_PEMBAYARAN')
 
 /** Why the tracking card has no carrier history to show. */
 const alasanTanpaRiwayat = computed(() => {
-  if (belumBayar.value) return 'Riwayat pelacakan muncul setelah pembayaran dikonfirmasi dan paket diserahkan ke kurir.'
+  if (belumBayar.value) return 'Riwayat pelacakan muncul setelah pembayaran diverifikasi admin dan paket diserahkan ke kurir.'
   if (order.value?.stage === 'BATAL') return 'Pesanan dibatalkan sebelum ada kabar dari kurir.'
   return 'Belum ada kabar dari kurir. Tarik layar ke bawah untuk memperbarui.'
 })
@@ -122,20 +123,57 @@ function requireConnection(): boolean {
   return false
 }
 
-async function pay() {
+const showPayment = ref(false)
+
+/**
+ * Opens the payment steps. Their Order ID is the order's Biteship draft;
+ * orders made before drafts existed get one here first.
+ */
+async function openPayment() {
+  if (!order.value) return
+  if (order.value.draftId) {
+    showPayment.value = true
+    return
+  }
   if (!requireConnection()) return
   pending.value = true
   try {
-    await $fetch(`/api/orders/${id.value}/pay`, { method: 'POST' })
+    await $fetch(`/api/orders/${id.value}/draft`, { method: 'POST' })
     await refresh()
-    await invalidateApiData(['orders', 'shipments', 'stats'])
-    toast.add({ title: 'Pembayaran dikonfirmasi', description: 'Pesananmu sedang diproses.' })
+    showPayment.value = true
   } catch (error) {
-    toast.add({ title: 'Gagal memproses pembayaran', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
+    toast.add({ title: 'Gagal menyiapkan pembayaran', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
   } finally {
     pending.value = false
   }
 }
+
+// The admin confirms the transfer outside the app, so an unpaid order keeps
+// asking while it is on screen; the server checks Biteship on each read.
+const visibility = useDocumentVisibility()
+useIntervalFn(() => {
+  if (belumBayar.value && online.value && visibility.value === 'visible' && status.value !== 'pending') {
+    void refresh()
+  }
+}, 20_000)
+
+watch(() => order.value?.stage, (now, before) => {
+  if (before !== 'MENUNGGU_PEMBAYARAN' || !now || now === before) return
+  showPayment.value = false
+  // A change this page made itself (cancelling) has already been announced.
+  if (pending.value) return
+  void invalidateApiData(['orders', 'shipments', 'stats'])
+  if (now === 'BATAL') {
+    toast.add({ title: 'Pesanan dibatalkan', color: 'warning' })
+  } else {
+    toast.add({
+      title: 'Pembayaran terkonfirmasi',
+      description: 'Pesananmu diproses dan kurir segera dijadwalkan.',
+      color: 'success',
+      icon: 'i-lucide-circle-check'
+    })
+  }
+})
 
 async function cancel() {
   if (!requireConnection()) return
@@ -231,6 +269,46 @@ async function cancel() {
           </p>
           <p class="text-sm text-red-600">
             Dibatalkan sebelum dijemput kurir.
+          </p>
+        </div>
+      </div>
+
+      <!-- Payment: waiting for the transfer to be verified, or confirmed -->
+      <div
+        v-if="belumBayar"
+        class="rounded-3xl border border-amber-100 bg-amber-50 p-5"
+      >
+        <div class="flex items-start gap-3">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+            <UIcon
+              name="i-lucide-wallet"
+              class="size-5 text-amber-600"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-bold text-amber-800">
+              Menunggu pembayaran
+            </p>
+            <p class="mt-0.5 text-sm text-amber-700">
+              Transfer {{ formatRupiah(order.price) }}, lalu konfirmasi lewat WhatsApp. Ketuk <span class="font-bold">Bayar</span> untuk langkah-langkahnya. Status berubah sendiri setelah admin memverifikasi.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        v-else-if="order.paidAt"
+        class="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"
+      >
+        <UIcon
+          name="i-lucide-badge-check"
+          class="size-5 shrink-0 text-emerald-600"
+        />
+        <div class="min-w-0">
+          <p class="text-base font-bold text-emerald-800">
+            Pembayaran terkonfirmasi
+          </p>
+          <p class="text-sm text-emerald-700">
+            {{ order.paidAt }}
           </p>
         </div>
       </div>
@@ -374,6 +452,17 @@ async function cancel() {
             </div>
           </div>
           <div
+            v-if="order.draftId"
+            class="py-2.5"
+          >
+            <dt class="text-xs font-semibold text-gray-400">
+              Order ID
+            </dt>
+            <dd class="mt-0.5 truncate font-mono text-base font-bold text-gray-800">
+              {{ order.draftId }}
+            </dd>
+          </div>
+          <div
             v-if="order.biteshipOrderId"
             class="py-2.5"
           >
@@ -422,6 +511,11 @@ async function cancel() {
         ref="printer"
         :order="order"
       />
+
+      <RiwayatPaymentSteps
+        v-model:open="showPayment"
+        :order="order"
+      />
     </AppPageContent>
 
     <AppStickyBar v-if="order && !loading">
@@ -432,14 +526,18 @@ async function cancel() {
           class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
           :disabled="pending || !online"
           :title="!online ? 'Butuh koneksi internet' : undefined"
-          @click="pay"
+          @click="openPayment"
         >
           <span
             v-ripple
             class="absolute inset-0 rounded-2xl"
           />
+          <UIcon
+            name="i-lucide-wallet"
+            class="relative z-10 size-5 pointer-events-none"
+          />
           <span class="relative z-10 pointer-events-none">
-            {{ online ? 'Lanjutkan Bayar' : 'Butuh koneksi internet' }}
+            {{ !online ? 'Butuh koneksi internet' : pending ? 'Memproses...' : `Bayar ${formatRupiah(order.price)}` }}
           </span>
         </button>
         <!-- None of these touch the server, so they stay usable offline. -->

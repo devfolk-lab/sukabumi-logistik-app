@@ -99,6 +99,13 @@ export interface Order {
   resi: string
   /** Biteship's order id, once the shipment has been handed over. */
   biteshipOrderId: string | null
+  /**
+   * Biteship's draft order id, shown to the customer as "Order ID". The admin
+   * confirms this draft once the bank transfer has been checked.
+   */
+  draftId: string | null
+  /** When the payment was confirmed ("3 Okt 2026, 14:05"), or null while unpaid. */
+  paidAt: string | null
   stage: OrderStage
   status: OrderStatus
   date: string
