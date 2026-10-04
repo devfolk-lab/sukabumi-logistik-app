@@ -12,17 +12,15 @@ export const PAYMENT_ACCOUNT = {
 } as const
 
 /**
- * The WhatsApp message a customer sends after transferring. "Order ID" is the
- * Biteship draft the admin confirms; "No. Referensi" is our order number,
- * which Biteship holds as the draft's `reference_id` — there is no waybill to
- * quote yet, since Biteship issues one only on confirmation.
+ * The WhatsApp message a customer sends after transferring. "No. Pesanan" is
+ * our order number, which the admin looks up in the admin menu — there is no
+ * waybill to quote yet, since the order reaches Biteship only once approved.
  */
-export function paymentRequestMessage(order: Pick<Order, 'draftId' | 'orderNo' | 'price'>): string {
+export function paymentRequestMessage(order: Pick<Order, 'orderNo' | 'price'>): string {
   return [
     'Halo Sukabumi Logistik, saya ingin mengirim paket.',
     '',
-    `Order ID: ${order.draftId ?? '-'}`,
-    `No. Referensi: ${order.orderNo}`,
+    `No. Pesanan: ${order.orderNo}`,
     `Total: ${formatRupiah(order.price)}`,
     '',
     'Saya akan mengirimkan bukti transfer setelah pesan ini.'

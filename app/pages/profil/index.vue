@@ -27,6 +27,13 @@ const menu = [
   { label: 'Alamat Tersimpan', to: '/alamat', icon: 'i-lucide-map-pin' },
   { label: 'Pengaturan Akun', to: '/profil/pengaturan', icon: 'i-lucide-settings' }
 ]
+
+// Staff menus, by role. On phones this is their only entry point.
+const authUser = useAuthUser()
+const adminMenu = computed(() => [
+  ...(canApproveOrders(authUser.value?.role) ? [{ label: 'Persetujuan Pesanan', to: '/admin/pesanan', icon: 'i-lucide-clipboard-check' }] : []),
+  ...(canManageStaff(authUser.value?.role) ? [{ label: 'Kelola Admin', to: '/admin/pengguna', icon: 'i-lucide-shield-user' }] : [])
+])
 </script>
 
 <template>
@@ -111,6 +118,44 @@ const menu = [
           </div>
         </div>
       </div>
+    </AppPageContent>
+
+    <AppPageContent
+      v-if="adminMenu.length"
+      class="mt-6 space-y-3"
+    >
+      <h2 class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800">
+        Admin
+        <UBadge
+          color="primary"
+          variant="subtle"
+          class="rounded-full"
+        >
+          {{ ROLE_LABEL[authUser?.role ?? 'USER'] }}
+        </UBadge>
+      </h2>
+
+      <NuxtLink
+        v-for="item in adminMenu"
+        :key="item.to"
+        v-ripple.dark
+        :to="item.to"
+        class="flex w-full items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-card hover:bg-gray-50 lg:shadow-card-flat"
+      >
+        <span class="pointer-events-none flex items-center gap-3 text-sm font-semibold text-gray-700">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+            <UIcon
+              :name="item.icon"
+              class="size-4 text-amber-600"
+            />
+          </span>
+          {{ item.label }}
+        </span>
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="pointer-events-none size-4 text-gray-300"
+        />
+      </NuxtLink>
     </AppPageContent>
 
     <AppPageContent class="mt-6 space-y-3 pb-6">

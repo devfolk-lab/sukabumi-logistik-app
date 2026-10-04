@@ -14,12 +14,15 @@ const courier = computed(() => booking.selectedCourier)
 
 const pending = ref(false)
 
-// Creating an order re-prices on Biteship and opens a draft there at that
-// tariff, so it is never queued — it waits for a live connection. Payment
-// happens afterwards, from the order's own page.
+// Creating an order re-prices on Biteship and stores it at that tariff, so it
+// is never queued — it waits for a live connection. Payment happens
+// afterwards, from the order's own page; an admin then books it on Biteship.
 const online = useOnline()
 
-async function checkout() {
+const showConfirm = ref(false)
+
+/** Checks the draft is complete, then asks; the order is only created from the confirmation. */
+function askCheckout() {
   if (pending.value) return
 
   if (!online.value) {
@@ -40,6 +43,11 @@ async function checkout() {
     return
   }
 
+  showConfirm.value = true
+}
+
+async function checkout() {
+  if (pending.value || !online.value) return
   pending.value = true
 
   try {
@@ -55,8 +63,9 @@ async function checkout() {
       }
     })
 
+    showConfirm.value = false
     booking.reset()
-    await invalidateApiData(['orders', 'shipments', 'stats'])
+    await invalidateApiData(['orders', 'stats'])
 
     toast.add({
       title: 'Pesanan dibuat',
@@ -308,7 +317,7 @@ async function checkout() {
         class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
         :disabled="pending || !online"
         :title="!online ? 'Butuh koneksi internet' : undefined"
-        @click="checkout"
+        @click="askCheckout"
       >
         <span
           v-ripple
@@ -319,5 +328,100 @@ async function checkout() {
         </span>
       </button>
     </AppStickyBar>
+
+    <AppDialog
+      v-model:open="showConfirm"
+      title="Buat pesanan ini?"
+      description="Periksa sekali lagi sebelum pesanan dibuat."
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <div
+          v-if="courier && booking.origin && booking.destination"
+          class="space-y-4"
+        >
+          <div class="flex items-center gap-3 rounded-2xl bg-primary-50 p-4">
+            <AppCourierLogo
+              :code="courier.code"
+              :brand="courier.brand"
+              class="size-12 shrink-0 rounded-xl text-sm"
+            />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-base font-bold text-gray-800">
+                {{ courier.name }} {{ courier.service }}
+              </p>
+              <p class="text-sm text-gray-500">
+                {{ formatEtd(courier.etd) }}
+              </p>
+            </div>
+            <p class="shrink-0 text-xl font-extrabold text-primary">
+              {{ formatRupiah(booking.total) }}
+            </p>
+          </div>
+
+          <dl class="space-y-1.5 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm">
+            <div class="flex justify-between gap-3">
+              <dt class="shrink-0 text-gray-400">
+                Dari
+              </dt>
+              <dd class="truncate text-right font-semibold text-gray-800">
+                {{ booking.sender.nama }} · {{ areaTitle(booking.origin) }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="shrink-0 text-gray-400">
+                Ke
+              </dt>
+              <dd class="truncate text-right font-semibold text-gray-800">
+                {{ booking.receiver.nama }} · {{ areaTitle(booking.destination) }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="shrink-0 text-gray-400">
+                Paket
+              </dt>
+              <dd class="truncate text-right font-semibold text-gray-800">
+                {{ booking.quantity }} barang · {{ formatBerat(booking.weightGram) }}
+              </dd>
+            </div>
+          </dl>
+
+          <p class="flex items-start gap-2 text-xs text-gray-500">
+            <UIcon
+              name="i-lucide-info"
+              class="mt-0.5 size-3.5 shrink-0"
+            />
+            Setelah dibuat, transfer sesuai total lalu konfirmasi lewat WhatsApp. Pesanan diteruskan ke kurir setelah admin memverifikasi pembayaran.
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full gap-2">
+          <UButton
+            v-ripple.dark
+            color="neutral"
+            variant="soft"
+            size="lg"
+            block
+            class="flex-1"
+            :disabled="pending"
+            @click="showConfirm = false"
+          >
+            Periksa Lagi
+          </UButton>
+          <UButton
+            v-ripple
+            color="primary"
+            size="lg"
+            block
+            class="flex-1 font-bold"
+            :loading="pending"
+            @click="checkout"
+          >
+            Ya, Buat Pesanan
+          </UButton>
+        </div>
+      </template>
+    </AppDialog>
   </div>
 </template>

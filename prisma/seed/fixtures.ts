@@ -97,6 +97,8 @@ export interface SeedAccount {
   id: string
   email: string
   password: string
+  /** The demo operator is the superadmin, so the admin menus can be tried. */
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN'
   nama: string
   telp: string
   alamat: string
@@ -106,8 +108,9 @@ export interface SeedAccount {
 
 const demo: SeedAccount = {
   id: '11111111-1111-4111-8111-111111111111',
-  email: 'superadmin@sukabumilogistik.com',
+  email: 'superadmin@sl.com',
   password: 'testing123',
+  role: 'SUPERADMIN',
   nama: 'Superadmin',
   telp: '081234567890',
   alamat: 'Jl. Ahmad Yani No. 12, RT 03/RW 05, Gunung Parang, Cikole',
@@ -320,6 +323,7 @@ const siti: SeedAccount = {
   id: '22222222-2222-4222-8222-222222222222',
   email: 'siti@sukabumilogistik.id',
   password: 'testing123',
+  role: 'USER',
   nama: 'Siti Rahayu',
   telp: '081298765432',
   alamat: 'Jl. Siliwangi No. 56, Cibadak',
@@ -375,6 +379,32 @@ const siti: SeedAccount = {
   ]
 }
 
+/** An admin with no shipments of their own, for trying the approval menu. */
+const admin: SeedAccount = {
+  id: '33333333-3333-4333-8333-333333333333',
+  email: 'admin@sl.com',
+  password: 'testing123',
+  role: 'ADMIN',
+  nama: 'Admin',
+  telp: '081234567893',
+  alamat: 'Jl. Ahmad Yani No. 12, Cikole',
+  addresses: [],
+  orders: []
+}
+
+/** A plain customer with nothing yet, for trying the app as a new user would. */
+const user: SeedAccount = {
+  id: '44444444-4444-4444-8444-444444444444',
+  email: 'user@sl.com',
+  password: 'testing123',
+  role: 'USER',
+  nama: 'User',
+  telp: '081234567894',
+  alamat: 'Jl. Ahmad Yani No. 12, Cikole',
+  addresses: [],
+  orders: []
+}
+
 /**
  * The first account is overridable so you can seed a login you already use:
  * `SEED_EMAIL=you@example.com SEED_PASSWORD=... pnpm db:seed`.
@@ -389,7 +419,9 @@ export function seedAccounts(): SeedAccount[] {
       email: email || demo.email,
       password: password || demo.password
     },
-    siti
+    siti,
+    admin,
+    user
   ]
 }
 

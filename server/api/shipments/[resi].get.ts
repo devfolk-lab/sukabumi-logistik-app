@@ -5,6 +5,7 @@ import { prisma } from '../../utils/prisma'
 import { ORDER_INCLUDE, toShipment, waybillToShipment } from '../../utils/mappers'
 import { syncTracking } from '../../utils/tracking'
 import { BiteshipError, biteshipFailure, trackWaybill } from '../../utils/biteship'
+import { recordLookup } from '../../utils/lookups'
 
 const query = z.object({
   /** Carrier code for a waybill not booked here; omitted means try each allowed carrier. */
@@ -48,7 +49,10 @@ export default defineEventHandler(async (event): Promise<Shipment> => {
 
   for (const code of candidates) {
     try {
-      return waybillToShipment(await trackWaybill(resi, code))
+      const shipment = waybillToShipment(await trackWaybill(resi, code))
+      // Lacak lists what was tracked before; orders placed here never get this far.
+      await recordLookup(profile.id, shipment)
+      return shipment
     } catch (error) {
       // An empty balance fails every carrier the same way; say so at once.
       if (error instanceof BiteshipError && error.noBalance) {

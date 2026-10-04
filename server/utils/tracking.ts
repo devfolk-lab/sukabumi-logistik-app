@@ -1,7 +1,7 @@
-import type { Order, TrackingEvent } from '../generated/prisma/client'
+import type { Order, Prisma, TrackingEvent } from '../generated/prisma/client'
 import type { OrderStage } from '#shared/types'
 import { prisma } from './prisma'
-import { getOrder, trackOrder } from './biteship'
+import { getOrder, type RawOrder } from './biteship'
 import { isDestinationSide, stageForStatus, statusTitle, toArea } from './mappers'
 
 /** Lifecycle order, so a late or repeated status never moves an order back. */
@@ -23,40 +23,42 @@ function nextStage(current: OrderStage, status: string): OrderStage | null {
 }
 
 /**
- * Pulls the live history for an order and caches it. Tracking is a
- * best-effort enrichment: a carrier outage must not break the detail page, so
- * failures fall back to whatever is already stored.
+ * The columns that mirror Biteship's order. Values Biteship leaves empty keep
+ * what we already have, so a waybill never disappears once assigned.
+ */
+export function biteshipOrderFields(raw: RawOrder, current?: Pick<Order, 'awb' | 'biteshipTrackingId' | 'trackingUrl'>) {
+  return {
+    biteshipOrderId: raw.id,
+    biteshipStatus: raw.status?.toLowerCase() || null,
+    biteshipPrice: typeof raw.price === 'number' ? Math.round(raw.price) : null,
+    biteshipTrackingId: raw.courier.tracking_id || current?.biteshipTrackingId || null,
+    trackingUrl: raw.courier.link || current?.trackingUrl || null,
+    awb: raw.courier.waybill_id || current?.awb || null
+  } satisfies Prisma.OrderUpdateInput
+}
+
+/**
+ * Pulls the order from Biteship's retrieve-order API, stores what changed on
+ * it, and caches the courier's history from it. Tracking is a best-effort
+ * enrichment: a carrier outage must not break the detail page, so failures
+ * fall back to whatever is already stored.
  *
- * Orders are tracked by Biteship `tracking_id`, which is free. An order
- * without one was never booked on Biteship (seed data, or a pre-Biteship
- * Komship sandbox AWB no carrier knows), so it is not looked up by waybill —
- * that lookup is billed per call and could only fail.
+ * Only orders an admin has booked on Biteship are looked up. Older ones
+ * (seed data, pre-Biteship Komship sandbox AWBs) have no Biteship order id
+ * and keep the history already stored.
  */
 export async function syncTracking(order: Order): Promise<TrackingEvent[]> {
-  // A confirmed draft records the booked order before its tracking id is
-  // known if that lookup failed at the time; fetch it now.
-  if (order.biteshipOrderId && !order.biteshipTrackingId) {
-    const booked = await getOrder(order.biteshipOrderId).catch(() => null)
-    if (booked?.courier.tracking_id) {
-      order = await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          biteshipTrackingId: booked.courier.tracking_id,
-          trackingUrl: booked.courier.link,
-          awb: order.awb || booked.courier.waybill_id
-        }
+  const raw = order.biteshipOrderId
+    ? await getOrder(order.biteshipOrderId).catch((error: unknown) => {
+        console.error('[biteship] order lookup failed:', order.biteshipOrderId, error instanceof Error ? error.message : error)
+        return null
       })
-    }
-  }
-
-  const tracking = order.biteshipTrackingId
-    ? await trackOrder(order.biteshipTrackingId).catch(() => null)
     : null
 
-  if (tracking) {
+  if (raw) {
     const from = areaPlace(toArea(order.originArea))
     const to = areaPlace(toArea(order.destinationArea))
-    const events = (tracking.history ?? []).map(h => ({
+    const events = (raw.courier.history ?? []).map(h => ({
       orderId: order.id,
       title: statusTitle(h.status, h.note),
       status: h.status.toLowerCase(),
@@ -69,13 +71,19 @@ export async function syncTracking(order: Order): Promise<TrackingEvent[]> {
       await prisma.trackingEvent.createMany({ data: events, skipDuplicates: true })
     }
 
-    const stage = nextStage(order.status, tracking.status)
-    const awb = order.awb || tracking.waybill_id || null
+    const stage = nextStage(order.status, raw.status)
+    const fields = biteshipOrderFields(raw, order)
+    const changed = stage
+      || fields.biteshipStatus !== order.biteshipStatus
+      || fields.biteshipPrice !== order.biteshipPrice
+      || fields.biteshipTrackingId !== order.biteshipTrackingId
+      || fields.trackingUrl !== order.trackingUrl
+      || fields.awb !== order.awb
 
-    if (stage || awb !== order.awb) {
+    if (changed) {
       await prisma.order.update({
         where: { id: order.id },
-        data: { ...(stage ? { status: stage } : {}), awb }
+        data: { ...fields, ...(stage ? { status: stage } : {}) }
       })
     }
   }

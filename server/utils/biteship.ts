@@ -1,14 +1,13 @@
 import type { Area, PackageItem } from '#shared/types'
 
 /**
- * Biteship API — area search, rates, draft orders, order lookup and
- * tracking. The key's prefix decides the environment: `biteship_test.`
- * creates orders that no courier ever collects and returns placeholder
- * waybills (`WYB-…`).
+ * Biteship API — area search, rates, orders and tracking. The key's prefix
+ * decides the environment: `biteship_test.` creates orders that no courier
+ * ever collects and returns placeholder waybills (`WYB-…`).
  *
  * Rates and public waybill tracking are billed per call and refused outright
- * while the account balance is empty, even with a test key. Draft orders,
- * order lookup, tracking by `tracking_id` and cancellation are not.
+ * while the account balance is empty, even with a test key. Order create,
+ * retrieve and cancel are not.
  */
 
 interface ErrorBody {
@@ -35,10 +34,13 @@ export interface RawHistory {
   updated_at: string
 }
 
+/** An order as `POST /v1/orders` and `GET /v1/orders/:id` return it. */
 export interface RawOrder {
   id: string
+  /** `confirmed`, `allocated`, `picked`… — the shipment's current status. */
   status: string
   price: number
+  reference_id?: string | null
   courier: {
     tracking_id: string | null
     waybill_id: string | null
@@ -47,19 +49,6 @@ export interface RawOrder {
     link: string | null
     history?: RawHistory[]
   }
-}
-
-/** A held booking: no courier is called and no waybill exists until confirmed. */
-export interface RawDraftOrder {
-  id: string
-  /** `placed` (incomplete), `ready` (confirmable) or `confirmed`. */
-  status: string
-  /** The real order's id, once the draft has been confirmed. */
-  order_id: string | null
-  reference_id: string | null
-  price: number
-  confirmed_at: string | null
-  deleted_at: string | null
 }
 
 export interface RawTracking {
@@ -220,42 +209,53 @@ export async function getRates(options: {
   return res.pricing ?? []
 }
 
+/** A point on the map, for carriers that place the pickup by coordinates. */
+export interface Coordinate {
+  latitude: number
+  longitude: number
+}
+
 export interface CreateOrderInput {
-  /** Our order number, sent as Biteship's unique `reference_id`. */
-  orderNo: string
+  /** Sent as Biteship's unique `reference_id`; our order number. */
+  referenceId: string
   senderNama: string
   senderTelp: string
   senderEmail: string
   senderAlamat: string
   originAreaId: string
+  originCoordinate?: Coordinate
   receiverNama: string
   receiverTelp: string
   receiverAlamat: string
   destinationAreaId: string
+  destinationCoordinate?: Coordinate
   courierCode: string
   serviceCode: string
   items: readonly PackageItem[]
+  note?: string
 }
 
 /**
- * Biteship rejects a `reference_id` it has already seen with this code, and
- * says nothing about which order holds it.
+ * Biteship rejects a `reference_id` it has already seen with this code, though
+ * it uses the same code for some other refusals too (a courier that could not
+ * be bound, for one), so the message is passed on as well.
  */
 const DUPLICATE_REFERENCE = 40002060
 
 /**
- * Holds the shipment as a draft order. Nothing is booked and nothing is
- * charged: an admin confirms the draft in the Biteship dashboard once the
- * customer's transfer has been checked, and only then does Biteship call the
- * courier and issue a waybill. Sending the courier makes the draft `ready`,
- * the one status the dashboard can confirm.
+ * Books the shipment: Biteship calls the courier and issues the waybill (or a
+ * tracking id the waybill follows on). Called only from the admin approval,
+ * once the customer's transfer has been checked — this is the step that
+ * costs money.
  *
- * `reference_id` is our order number, so the admin can find the draft by the
- * number the customer sends on WhatsApp, and the confirmed order carries it too.
+ * Coordinates are optional; some carriers (Lion, POS, Paxel) place the pickup
+ * by them and may refuse or misquote an order that has only area ids.
  */
-export async function createDraftOrder(input: CreateOrderInput): Promise<RawDraftOrder> {
+export async function createOrder(input: CreateOrderInput): Promise<RawOrder> {
+  const coordinate = (c?: Coordinate) => (c ? { latitude: c.latitude, longitude: c.longitude } : undefined)
+
   try {
-    return await call<RawDraftOrder>('/v1/draft_orders', {
+    return await call<RawOrder>('/v1/orders', {
       method: 'POST',
       body: {
         shipper_contact_name: input.senderNama,
@@ -267,39 +267,46 @@ export async function createDraftOrder(input: CreateOrderInput): Promise<RawDraf
         origin_contact_email: input.senderEmail,
         origin_address: input.senderAlamat,
         origin_area_id: input.originAreaId,
+        ...(input.originCoordinate ? { origin_coordinate: coordinate(input.originCoordinate) } : {}),
         destination_contact_name: input.receiverNama,
         destination_contact_phone: input.receiverTelp,
         destination_address: input.receiverAlamat,
         destination_area_id: input.destinationAreaId,
+        ...(input.destinationCoordinate ? { destination_coordinate: coordinate(input.destinationCoordinate) } : {}),
         courier_company: input.courierCode,
         courier_type: input.serviceCode,
         delivery_type: 'now',
-        reference_id: input.orderNo,
-        order_note: input.orderNo,
+        reference_id: input.referenceId,
+        order_note: input.note ?? input.referenceId,
         items: toBiteshipItems(input.items)
       }
     })
   } catch (error) {
-    if (error instanceof BiteshipError && error.code === DUPLICATE_REFERENCE) {
-      console.error(`[biteship] ${input.orderNo} already has a draft; needs a manual check`)
+    if (error instanceof BiteshipError) {
+      console.error(`[biteship] order ${input.referenceId} refused:`, error.status, error.code ?? '', error.message)
+      if (error.noBalance) {
+        throw createError({ statusCode: 503, statusMessage: 'Gagal membuat pesanan di Biteship: saldo akun Biteship belum diisi' })
+      }
+      // Only staff reach this route, so Biteship's own reason is shown too —
+      // it is what tells the admin whether to fix the data or check the dashboard.
       throw createError({
-        statusCode: 409,
-        statusMessage: 'Pesanan ini sudah pernah dibuat di sistem kurir. Hubungi admin untuk pengecekan.'
+        statusCode: error.code === DUPLICATE_REFERENCE ? 409 : 502,
+        statusMessage: `Biteship menolak pesanan ini: ${error.message}`
       })
     }
-    throw biteshipFailure(error, 'Gagal membuat pesanan di sistem kurir')
+    throw error
   }
 }
 
-export async function getDraftOrder(id: string): Promise<RawDraftOrder> {
-  return call<RawDraftOrder>(`/v1/draft_orders/${encodeURIComponent(id)}`)
-}
-
-/** Only an unconfirmed draft can be deleted; Biteship refuses a confirmed one. */
+/**
+ * Removes a legacy draft order (see `Order.biteshipDraftId`). Only an
+ * unconfirmed draft can be deleted; Biteship refuses a confirmed one.
+ */
 export async function deleteDraftOrder(id: string): Promise<void> {
   await call(`/v1/draft_orders/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
+/** An order booked here, with the courier's history. Not billed. */
 export async function getOrder(id: string): Promise<RawOrder> {
   return call<RawOrder>(`/v1/orders/${encodeURIComponent(id)}`)
 }
@@ -309,11 +316,6 @@ export async function cancelOrder(id: string, reason = 'Dibatalkan oleh pengirim
     method: 'POST',
     body: { cancellation_reason_code: 'others', cancellation_reason: reason }
   })
-}
-
-/** Tracking for an order booked here. Not billed, so it works without balance. */
-export async function trackOrder(trackingId: string): Promise<RawTracking> {
-  return call<RawTracking>(`/v1/trackings/${encodeURIComponent(trackingId)}`)
 }
 
 /** Tracking for any waybill, including ones not booked here. Billed per call. */

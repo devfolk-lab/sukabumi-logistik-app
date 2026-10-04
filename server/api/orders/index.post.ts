@@ -5,7 +5,6 @@ import { prisma } from '../../utils/prisma'
 import { getRates } from '../../utils/biteship'
 import { ORDER_INCLUDE, generateOrderNo, toDomainOrder } from '../../utils/mappers'
 import { areaSchema, itemsSchema } from '../../utils/schemas'
-import { ensureDraft } from '../../utils/payment'
 
 const party = z.object({
   nama: z.string().trim().min(1, 'Nama wajib diisi').max(120),
@@ -87,16 +86,8 @@ export default defineEventHandler(async (event): Promise<Order> => {
     include: ORDER_INCLUDE
   })
 
-  // The Biteship draft is what the admin confirms after the transfer, so an
-  // order without one could never be paid. Our row is written first because
-  // its unique `orderNo` becomes the draft's `reference_id`; if Biteship then
-  // refuses, the row is removed and the customer simply tries again.
-  try {
-    const drafted = await ensureDraft(created, profile.email)
-    setResponseStatus(event, 201)
-    return toDomainOrder(drafted)
-  } catch (error) {
-    await prisma.order.delete({ where: { id: created.id } }).catch(() => {})
-    throw error
-  }
+  // Nothing goes to Biteship yet: the order waits here, unpaid, until an admin
+  // has checked the transfer and approves it, which books it on Biteship.
+  setResponseStatus(event, 201)
+  return toDomainOrder(created)
 })

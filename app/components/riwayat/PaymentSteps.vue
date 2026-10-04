@@ -4,8 +4,8 @@ import type { Order } from '~/types'
 /**
  * How to pay an order: transfer to our account, send the prefilled WhatsApp
  * message, send the transfer proof in that chat, then wait. The admin checks
- * the transfer and confirms the Biteship draft; the order page notices on its
- * next refresh and moves on by itself.
+ * the transfer and approves the order, which books it with the courier; the
+ * order page notices on its next refresh and moves on by itself.
  */
 const props = defineProps<{ order: Order }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -99,20 +99,12 @@ async function copyText(value: string, what: string) {
                 Konfirmasi lewat WhatsApp
               </p>
               <p class="mt-0.5 text-sm text-gray-500">
-                Ketuk tombol di bawah. Pesannya sudah terisi Order ID dan nomor referensi pesananmu, tinggal kirim.
+                Ketuk tombol di bawah. Pesannya sudah terisi nomor pesananmu, tinggal kirim.
               </p>
               <dl class="mt-2.5 space-y-1.5 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm">
                 <div class="flex justify-between gap-3">
                   <dt class="shrink-0 text-gray-400">
-                    Order ID
-                  </dt>
-                  <dd class="truncate font-mono font-semibold text-gray-800">
-                    {{ order.draftId ?? '-' }}
-                  </dd>
-                </div>
-                <div class="flex justify-between gap-3">
-                  <dt class="shrink-0 text-gray-400">
-                    No. Referensi
+                    No. Pesanan
                   </dt>
                   <dd class="truncate font-mono font-semibold text-gray-800">
                     {{ order.orderNo }}

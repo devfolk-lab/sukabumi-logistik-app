@@ -3,9 +3,21 @@ import type { OrderStatus } from '~/types'
 
 definePageMeta({ refreshKeys: ['orders'] })
 
+const route = useRoute()
 const { data: orders, status } = useOrders()
 
-const filter = ref<OrderStatus | 'all'>('all')
+const FILTERS = ['all', 'proses', 'selesai', 'batal'] as const
+
+/** `?tab=proses` opens on that tab — home's "Pengiriman Aktif · Lihat Semua" uses it. */
+function tabFromQuery(): OrderStatus | 'all' {
+  const tab = String(route.query.tab ?? '')
+  return (FILTERS as readonly string[]).includes(tab) ? tab as OrderStatus | 'all' : 'all'
+}
+
+const filter = ref<OrderStatus | 'all'>(tabFromQuery())
+watch(() => route.query.tab, () => {
+  filter.value = tabFromQuery()
+})
 
 const tabs = [
   { label: 'Semua', value: 'all', icon: 'i-lucide-layers' },

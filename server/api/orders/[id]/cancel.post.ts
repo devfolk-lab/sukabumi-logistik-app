@@ -3,7 +3,8 @@ import type { Order } from '#shared/types'
 import { requireProfile } from '../../../utils/auth'
 import { prisma } from '../../../utils/prisma'
 import { ORDER_INCLUDE, toDomainOrder } from '../../../utils/mappers'
-import { biteshipFailure, cancelOrder, deleteDraftOrder } from '../../../utils/biteship'
+import { biteshipFailure, cancelOrder } from '../../../utils/biteship'
+import { cancelUnpaidOrder } from '../../../utils/approval'
 
 export default defineEventHandler(async (event): Promise<Order> => {
   const profile = await requireProfile(event)
@@ -24,17 +25,12 @@ export default defineEventHandler(async (event): Promise<Order> => {
     throw createError({ statusCode: 409, statusMessage: 'Pesanan sudah tidak bisa dibatalkan' })
   }
 
-  // An unpaid order's draft is deleted so the admin cannot confirm it later.
-  // Biteship refuses that once the draft is confirmed — the transfer has been
-  // accepted and a courier booked — so cancelling is then the admin's call.
-  if (order.status === 'MENUNGGU_PEMBAYARAN' && order.biteshipDraftId) {
-    await deleteDraftOrder(order.biteshipDraftId).catch((error) => {
-      console.error('[biteship] draft delete refused:', error)
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Pembayaran pesanan ini sudah dikonfirmasi. Hubungi Pusat Bantuan untuk membatalkan.'
-      })
-    })
+  // An unpaid order exists only here, so cancelling it is ours alone — unless
+  // an admin is approving it at this very moment, which is refused.
+  if (order.status === 'MENUNGGU_PEMBAYARAN' && !order.biteshipOrderId) {
+    await cancelUnpaidOrder(order.id, { profileId: profile.id })
+    const cancelled = await prisma.order.findUniqueOrThrow({ where: { id: order.id }, include: ORDER_INCLUDE })
+    return toDomainOrder(cancelled)
   }
 
   // A courier that is still coming must be called off before the order is

@@ -1,4 +1,4 @@
-import type { Address as DomainAddress, Area, Order as DomainOrder, OrderStage, PackageItem, RoutePoint, Shipment, TimelineStep } from '#shared/types'
+import type { Address as DomainAddress, AdminOrder, Area, Order as DomainOrder, OrderStage, PackageItem, RoutePoint, Shipment, TimelineStep } from '#shared/types'
 import type { Address, Order, OrderItem, Prisma, TrackingEvent } from '../generated/prisma/client'
 import type { RawHistory, RawTracking } from './biteship'
 
@@ -87,7 +87,6 @@ export function toDomainOrder(o: OrderWithItems): DomainOrder {
     orderNo: o.orderNo,
     resi: publicReference(o),
     biteshipOrderId: o.biteshipOrderId,
-    draftId: o.biteshipDraftId,
     paidAt: o.paidAt ? formatWaktu(o.paidAt) : null,
     stage: o.status,
     status: stageToStatus(o.status),
@@ -107,6 +106,22 @@ export function toDomainOrder(o: OrderWithItems): DomainOrder {
     content: itemsSummary(items),
     items,
     awb: o.awb
+  }
+}
+
+type AdminOrderRow = OrderWithItems & {
+  profile: { id: string, nama: string, email: string, telp: string | null }
+  approvedBy: { email: string, profile: { nama: string } | null } | null
+}
+
+export function toAdminOrder(o: AdminOrderRow): AdminOrder {
+  return {
+    ...toDomainOrder(o),
+    customer: o.profile,
+    createdAt: o.createdAt.toISOString(),
+    approvedAt: o.approvedAt && o.biteshipOrderId ? formatWaktu(o.approvedAt) : null,
+    approvedBy: o.biteshipOrderId && o.approvedBy ? o.approvedBy.profile?.nama || o.approvedBy.email : null,
+    biteshipStatus: o.biteshipStatus
   }
 }
 
@@ -197,6 +212,10 @@ export function toShipment(o: OrderWithItems & { trackingEvents?: TrackingEvent[
   return {
     resi: publicReference(o),
     orderId: o.id,
+    stage: o.status,
+    link: o.trackingUrl,
+    origin: { nama: o.senderNama, alamat: o.senderAlamat },
+    destination: { nama: o.receiverNama, alamat: o.receiverAlamat },
     courier: courierDisplay(o),
     courierCode: o.courierCode,
     price: o.total,
@@ -289,9 +308,17 @@ export function waybillToShipment(t: RawTracking): Shipment {
 
   const last = history.at(-1)
 
+  // Statuses that do not move the lifecycle (confirmed, allocated…) mean the
+  // carrier has the booking but not yet the package.
+  const stage = delivered ? 'SELESAI' : stageForStatus(t.status ?? '') ?? 'DIPROSES'
+
   return {
     resi: t.waybill_id,
     orderId: null,
+    stage,
+    link: t.link ?? null,
+    origin: { nama: t.origin?.contact_name || '-', alamat: t.origin?.address || '-' },
+    destination: { nama: t.destination?.contact_name || '-', alamat: t.destination?.address || '-' },
     courier: courierLabel(t.courier.company),
     courierCode: t.courier.company.toLowerCase(),
     price: null,

@@ -32,7 +32,10 @@ async function search() {
 
   try {
     const shipment = await $fetch<Shipment>(`/api/shipments/${encodeURIComponent(resi)}`, { query })
-    await navigateTo({ path: `/lacak/${shipment.resi}`, query: { courier: shipment.courierCode } })
+    // Orders created in this app live in Riwayat; Lacak is for everything else.
+    await navigateTo(shipment.orderId
+      ? `/riwayat/${shipment.orderId}`
+      : { path: `/lacak/${shipment.resi}`, query: { courier: shipment.courierCode } })
   } catch (err) {
     error.value = apiMessage(err, 'Resi tidak ditemukan. Periksa lagi nomornya.')
   } finally {
@@ -48,7 +51,7 @@ async function search() {
       class="text-sm font-semibold text-gray-700"
     >Lacak dengan nomor resi</label>
     <p class="mt-0.5 text-xs text-gray-500">
-      Resi J&T Express atau Lion Parcel dari mana saja bisa dilacak di sini.
+      Untuk kiriman yang tidak dibuat di aplikasi ini: resi Lion Parcel atau J&T Cargo dari mana saja bisa dilacak di sini. Pesanan dari aplikasi ada di Riwayat.
     </p>
     <div class="mt-3 flex flex-col gap-2 sm:flex-row">
       <UInput

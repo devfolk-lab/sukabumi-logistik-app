@@ -14,6 +14,7 @@ export interface AuthUserInput {
   id: string
   email: string
   password: string
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN'
 }
 
 /** Creates or resets one login and returns the user id `Profile.id` must use. */
@@ -28,8 +29,8 @@ export async function upsertAuthUser(prisma: PrismaClient, input: AuthUserInput)
 
   await prisma.user.upsert({
     where: { id },
-    update: { email, passwordHash, emailVerifiedAt: new Date() },
-    create: { id, email, passwordHash, emailVerifiedAt: new Date() }
+    update: { email, passwordHash, emailVerifiedAt: new Date(), role: input.role },
+    create: { id, email, passwordHash, emailVerifiedAt: new Date(), role: input.role }
   })
 
   // A reseeded password should not leave old devices signed in.

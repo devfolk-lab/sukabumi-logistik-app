@@ -4,7 +4,6 @@ import { requireProfile } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { ORDER_INCLUDE, toDomainOrder, toShipment } from '../../utils/mappers'
 import { syncTracking } from '../../utils/tracking'
-import { syncPayment } from '../../utils/payment'
 
 export default defineEventHandler(async (event): Promise<{ order: Order, shipment: Shipment }> => {
   const profile = await requireProfile(event)
@@ -16,13 +15,10 @@ export default defineEventHandler(async (event): Promise<{ order: Order, shipmen
     throw createError({ statusCode: 404, statusMessage: 'Pesanan tidak ditemukan' })
   }
 
-  // A confirmed payment gives the order its tracking id, so it is checked
-  // first and tracking then reads the updated row.
-  await syncPayment(found)
-  const row = await prisma.order.findUniqueOrThrow({ where: { id: found.id } })
-
-  const trackingEvents = await syncTracking(row)
-  const fresh = await prisma.order.findUniqueOrThrow({ where: { id: row.id }, include: ORDER_INCLUDE })
+  // Our row is the record; Biteship's retrieve-order adds the courier's
+  // history and whatever moved on the shipment since the last read.
+  const trackingEvents = await syncTracking(found)
+  const fresh = await prisma.order.findUniqueOrThrow({ where: { id: found.id }, include: ORDER_INCLUDE })
 
   return {
     order: toDomainOrder(fresh),

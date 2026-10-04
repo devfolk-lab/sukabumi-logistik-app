@@ -22,6 +22,14 @@ enum OrderStatus {
   BATAL
 }
 
+// What an account may do. `ADMIN` approves paid orders (books them on
+// Biteship); `SUPERADMIN` can do that and also manage who is staff.
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
 enum AuthTokenType {
   VERIFY_EMAIL
   RESET_PASSWORD
@@ -37,12 +45,14 @@ model User {
   passwordHash    String
   // Null until the confirmation link is opened; login is refused until then.
   emailVerifiedAt DateTime?
+  role            Role      @default(USER)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  profile    Profile?
-  sessions   Session[]
-  authTokens AuthToken[]
+  profile        Profile?
+  sessions       Session[]
+  authTokens     AuthToken[]
+  approvedOrders Order[]
 
   @@map("users")
 }
@@ -87,9 +97,10 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User      @relation(fields: [id], references: [id], onDelete: Cascade)
-  addresses Address[]
-  orders    Order[]
+  user            User             @relation(fields: [id], references: [id], onDelete: Cascade)
+  addresses       Address[]
+  orders          Order[]
+  trackingLookups TrackingLookup[]
 
   @@map("profiles")
 }
@@ -152,30 +163,42 @@ model Order {
   shippingCost Int
   total        Int
 
-  // Paid by manual bank transfer: an admin checks the transfer and confirms
-  // the Biteship draft order, and the app records that as "TRANSFER". Orders
-  // from the earlier demo checkout carry "DEMO".
+  // Paid by manual bank transfer: an admin checks the transfer and approves
+  // the order in the admin menu, which books it on Biteship and records
+  // "TRANSFER". Orders from the earlier demo checkout carry "DEMO".
   paymentMethod String?
   paidAt        DateTime?
 
-  // Biteship draft order created with the order. It holds the booking without
-  // a courier or waybill until an admin confirms it in the Biteship dashboard.
+  // Who approved the order and when. Set before Biteship is called, so it
+  // doubles as the claim that stops two admins booking one order twice.
+  approvedAt   DateTime?
+  approvedById String?   @db.Uuid
+
+  // Legacy: the Biteship draft order some unpaid orders got before orders
+  // were booked directly. Its `reference_id` holds our `orderNo`.
   biteshipDraftId String? @unique
 
-  // Set once the draft is confirmed and Biteship has booked the courier.
+  // Copied from Biteship's order once it is booked, and kept current from
+  // its retrieve-order response.
   awb                String?
   biteshipOrderId    String?
   biteshipTrackingId String?
   trackingUrl        String?
+  /// Biteship's own order status (`confirmed`, `picked`…), lowercase.
+  biteshipStatus     String?
+  /// What Biteship charges us for the booking, in rupiah.
+  biteshipPrice      Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   profile        Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  approvedBy     User?           @relation(fields: [approvedById], references: [id], onDelete: SetNull)
   items          OrderItem[]
   trackingEvents TrackingEvent[]
 
   @@index([profileId, createdAt])
+  @@index([status, createdAt])
   @@index([awb])
   @@map("orders")
 }
@@ -203,6 +226,37 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+// A waybill someone tracked on Lacak that was not created in this app — one
+// row per account, waybill and carrier, refreshed on every lookup, so the
+// Lacak page can list what was tracked before. Orders placed here are never
+// recorded; they live in Riwayat.
+model TrackingLookup {
+  id          String @id @default(uuid()) @db.Uuid
+  profileId   String @db.Uuid
+  waybill     String
+  courierCode String
+  courierName String
+
+  /// The carrier's status at the last lookup, as the timeline titles it.
+  status String
+  stage  OrderStatus
+
+  originNama        String?
+  originAlamat      String?
+  destinationNama   String?
+  destinationAlamat String?
+
+  createdAt DateTime @default(now())
+  /// When it was last looked up; the list is sorted by it.
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, waybill, courierCode])
+  @@index([profileId, updatedAt])
+  @@map("tracking_lookups")
 }
 
 model TrackingEvent {

@@ -10,6 +10,13 @@ const items = [
 
 const route = useRoute()
 const { data: profile } = useProfile()
+const authUser = useAuthUser()
+
+// Staff menus, shown by role. The server checks the role again on every call.
+const adminItems = computed(() => [
+  ...(canApproveOrders(authUser.value?.role) ? [{ label: 'Persetujuan Pesanan', to: '/admin/pesanan', icon: 'i-lucide-clipboard-check' }] : []),
+  ...(canManageStaff(authUser.value?.role) ? [{ label: 'Kelola Admin', to: '/admin/pengguna', icon: 'i-lucide-shield-user' }] : [])
+])
 
 const confirmLogout = ref(false)
 
@@ -48,6 +55,31 @@ function isActive(to: string): boolean {
         </span>
         <span class="pointer-events-none">{{ item.label }}</span>
       </NuxtLink>
+
+      <template v-if="adminItems.length">
+        <p class="px-3 pt-5 pb-1 text-xs font-bold uppercase tracking-wider text-gray-400">
+          Admin
+        </p>
+        <NuxtLink
+          v-for="item in adminItems"
+          :key="item.to"
+          v-ripple.dark
+          :to="item.to"
+          class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold"
+          :class="isActive(item.to) ? 'bg-primary-50 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'"
+        >
+          <span
+            class="pointer-events-none flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
+            :class="isActive(item.to) ? 'bg-primary text-white' : 'bg-gray-100'"
+          >
+            <UIcon
+              :name="item.icon"
+              class="size-4.5"
+            />
+          </span>
+          <span class="pointer-events-none">{{ item.label }}</span>
+        </NuxtLink>
+      </template>
     </nav>
 
     <div class="mt-4 shrink-0 border-t border-gray-100 pt-4">

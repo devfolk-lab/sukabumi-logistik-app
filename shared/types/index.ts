@@ -97,13 +97,8 @@ export interface Order {
   orderNo: string
   /** Best public reference: carrier AWB, else `orderNo`. */
   resi: string
-  /** Biteship's order id, once the shipment has been handed over. */
+  /** Biteship's order id, once an admin has approved the order and booked it. */
   biteshipOrderId: string | null
-  /**
-   * Biteship's draft order id, shown to the customer as "Order ID". The admin
-   * confirms this draft once the bank transfer has been checked.
-   */
-  draftId: string | null
   /** When the payment was confirmed ("3 Okt 2026, 14:05"), or null while unpaid. */
   paidAt: string | null
   stage: OrderStage
@@ -144,10 +139,27 @@ export interface TimelineStep {
   current?: boolean
 }
 
+/** One end of a shipment as the carrier knows it: who, and where. */
+export interface ShipmentParty {
+  nama: string
+  alamat: string
+}
+
 export interface Shipment {
   resi: string
   /** Null for a waybill looked up straight from Biteship with no order here. */
   orderId: string | null
+  /**
+   * Where the shipment stands, as our lifecycle stage — the order's own, or
+   * derived from the carrier's status for a waybill not booked here — so both
+   * detail pages draw the same stepper.
+   */
+  stage: OrderStage
+  /** The carrier's tracking page, when Biteship gives one. */
+  link: string | null
+  /** Sender and receiver as the carrier (or our order) has them. */
+  origin: ShipmentParty
+  destination: ShipmentParty
   courier: string
   courierCode: string
   price: number | null
@@ -163,6 +175,21 @@ export interface Shipment {
    * when it is derived from our order stage because no history exists yet.
    */
   tracked: boolean
+}
+
+/** A waybill tracked on Lacak (not created in this app), as last looked up. */
+export interface TrackedWaybill {
+  id: string
+  resi: string
+  courierCode: string
+  courier: string
+  /** The carrier's status at the last lookup. */
+  status: string
+  stage: OrderStage
+  origin: ShipmentParty
+  destination: ShipmentParty
+  /** "4 Okt 2026, 14:05" */
+  lookedUpAt: string
 }
 
 export interface Address {
@@ -189,6 +216,12 @@ export interface User {
 }
 
 /**
+ * What an account may do. `ADMIN` approves paid orders; `SUPERADMIN` can also
+ * manage the staff. Mirrors the Prisma `Role` enum.
+ */
+export type Role = 'USER' | 'ADMIN' | 'SUPERADMIN'
+
+/**
  * Who is signed in, as `/api/auth/session` reports it. The client keeps a copy
  * so a cold start offline still knows whose cached data it may show.
  */
@@ -196,6 +229,32 @@ export interface SessionUser {
   id: string
   email: string
   nama: string
+  /** Only decides which menus show; the server checks it on every admin route. */
+  role: Role
+}
+
+/** An order as the admin menu lists it: the customer's order plus who placed it. */
+export interface AdminOrder extends Order {
+  customer: { id: string, nama: string, email: string, telp: string | null }
+  /** ISO timestamp, for sorting and "5 menit lalu". */
+  createdAt: string
+  /** When an admin approved it and who, or null while it waits. */
+  approvedAt: string | null
+  approvedBy: string | null
+  /** Biteship's own status for the booked order, lowercase. */
+  biteshipStatus: string | null
+}
+
+/** One account as the staff menu lists it. */
+export interface StaffUser {
+  id: string
+  nama: string
+  email: string
+  telp: string | null
+  role: Role
+  /** False until the confirmation link was opened; such an account cannot sign in. */
+  verified: boolean
+  createdAt: string
 }
 
 export interface OrderStats {

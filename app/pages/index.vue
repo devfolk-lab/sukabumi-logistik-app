@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import type { TourStep } from '~/components/app/AppTour.vue'
+import type { TourStep, TourWelcome } from '~/components/app/AppTour.vue'
 
-definePageMeta({ refreshKeys: ['profile', 'shipments', 'orders', 'stats'] })
+definePageMeta({ refreshKeys: ['profile', 'orders', 'stats'] })
 
 const { data: profile } = useProfile()
-const { data: shipments, status } = useActiveShipments()
 const { data: orders, status: ordersStatus } = useOrders()
+
+const ordersLoading = computed(() => ordersStatus.value === 'pending' || ordersStatus.value === 'idle')
+
+// Paid orders still on their way; the same cards as the history below.
+const activeOrders = computed(() => orders.value.filter(o =>
+  o.stage === 'DIPROSES' || o.stage === 'DIJEMPUT' || o.stage === 'DALAM_PERJALANAN'
+))
 
 // The home screen only teases the history; the riwayat page has the full list.
 const recentOrders = computed(() => orders.value.slice(0, 3))
@@ -13,11 +19,18 @@ const recentOrders = computed(() => orders.value.slice(0, 3))
 // Shown once to a new account: what each part of the home screen is for.
 const tourSteps: TourStep[] = [
   { target: 'kirim', title: 'Kirim Paket', body: 'Mulai pengiriman di sini: pilih lokasi jemput dan tujuan, isi detail barang, lalu bandingkan tarif kurir.' },
-  { target: 'lacak', title: 'Lacak Pengiriman', body: 'Masukkan nomor resi untuk melihat posisi paket dan riwayat perjalanannya.' },
+  { target: 'lacak', title: 'Lacak Pengiriman', body: 'Untuk kiriman yang tidak dibuat di aplikasi ini: masukkan nomor resi Lion Parcel atau J&T Cargo dari mana saja untuk melihat posisi dan perjalanannya.' },
+  { target: 'riwayat-menu', title: 'Riwayat', body: 'Semua pesanan yang kamu buat di aplikasi ini. Di sini kamu bisa bayar, melihat perjalanan paket, mencetak resi, atau mengirim lagi.' },
   { target: 'alamat', title: 'Alamat Tersimpan', body: 'Simpan alamat yang sering dipakai supaya tidak perlu mengetik ulang setiap kali mengirim.' },
-  { target: 'aktif', title: 'Pengiriman Aktif', body: 'Paket yang sedang dalam perjalanan tampil di sini. Ketuk salah satunya untuk melihat statusnya.' },
-  { target: 'riwayat', title: 'Riwayat Pengiriman', body: 'Semua pesananmu, termasuk yang sudah selesai atau dibatalkan. Buka pesanan untuk mencetak resi atau mengirim lagi.' }
+  { target: 'aktif', title: 'Pengiriman Aktif', body: 'Pesananmu yang sedang dalam perjalanan tampil di sini. Ketuk salah satunya untuk melihat statusnya.' },
+  { target: 'riwayat', title: 'Pesanan Terbaru', body: 'Tiga pesanan terakhirmu. Ketuk Lihat Semua untuk membuka seluruh riwayat.' }
 ]
+
+// Opens the tour, centred, before the first spotlight.
+const tourWelcome = computed<TourWelcome>(() => ({
+  title: profile.value?.nama ? `Selamat datang, ${profile.value.nama.split(' ')[0]}!` : 'Selamat datang!',
+  body: 'Yuk kenalan dulu dengan Sukabumi Logistik. Tur singkat ini menunjukkan tempat untuk mengirim paket, melacak resi, dan melihat riwayat pesananmu.'
+}))
 
 const salam = computed(() => {
   const jam = new Date().getHours()
@@ -65,38 +78,31 @@ const salam = computed(() => {
         </h2>
         <NuxtLink
           v-ripple.dark
-          to="/lacak"
+          :to="{ path: '/riwayat', query: { tab: 'proses' } }"
           class="rounded-lg px-2 py-1 text-sm font-semibold text-primary"
         >
           Lihat Semua
         </NuxtLink>
       </div>
       <div
-        v-if="status === 'pending'"
+        v-if="ordersLoading"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton
           v-for="n in 2"
           :key="n"
-          class="h-24 rounded-3xl"
+          class="h-28 rounded-3xl"
         />
       </div>
       <div
-        v-else-if="shipments.length"
+        v-else-if="activeOrders.length"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
-        <NuxtLink
-          v-for="shipment in shipments"
-          :key="shipment.resi"
-          v-ripple.dark
-          :to="{ path: `/lacak/${shipment.resi}`, query: { courier: shipment.courierCode } }"
-          class="block rounded-3xl"
-        >
-          <HomeActiveShipmentCard
-            :shipment="shipment"
-            class="pointer-events-none"
-          />
-        </NuxtLink>
+        <RiwayatCard
+          v-for="order in activeOrders"
+          :key="order.id"
+          :order="order"
+        />
       </div>
       <div
         v-else
@@ -142,7 +148,7 @@ const salam = computed(() => {
         </NuxtLink>
       </div>
       <div
-        v-if="ordersStatus === 'pending' || ordersStatus === 'idle'"
+        v-if="ordersLoading"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton
@@ -181,8 +187,9 @@ const salam = computed(() => {
     </AppPageContent>
 
     <AppTour
-      name="home-v1"
+      name="home-v2"
       :steps="tourSteps"
+      :welcome="tourWelcome"
     />
   </div>
 </template>

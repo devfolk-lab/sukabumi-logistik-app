@@ -1,4 +1,4 @@
-import type { SessionUser } from '~/types'
+import type { Role, SessionUser } from '~/types'
 
 /**
  * Who is signed in. The session itself is an httpOnly cookie the page cannot
@@ -9,6 +9,8 @@ import type { SessionUser } from '~/types'
  */
 
 const SNAPSHOT_KEY = 'suklog:user'
+
+const ROLES: readonly Role[] = ['USER', 'ADMIN', 'SUPERADMIN']
 
 export function useAuthUser() {
   return useState<SessionUser | null>('auth:user', () => null)
@@ -29,7 +31,14 @@ export function readAuthSnapshot(): SessionUser | null {
     const raw = localStorage.getItem(SNAPSHOT_KEY)
     const parsed = raw ? JSON.parse(raw) as Partial<SessionUser> : null
     return parsed && typeof parsed.id === 'string' && typeof parsed.email === 'string'
-      ? { id: parsed.id, email: parsed.email, nama: String(parsed.nama ?? '') }
+      ? {
+          id: parsed.id,
+          email: parsed.email,
+          nama: String(parsed.nama ?? ''),
+          // A copy from before roles existed reads as a customer until the
+          // server's answer arrives.
+          role: ROLES.includes(parsed.role as Role) ? parsed.role as Role : 'USER'
+        }
       : null
   } catch {
     return null

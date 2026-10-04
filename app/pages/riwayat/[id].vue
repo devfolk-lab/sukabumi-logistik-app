@@ -20,7 +20,7 @@ const { data, status, error, refresh } = useAsyncData(
 // and then syncs the lists the same change would affect.
 registerPageRefresh(async () => {
   await refresh()
-  await invalidateApiData(['orders', 'shipments', 'stats'])
+  await invalidateApiData(['orders', 'stats'])
 })
 
 // Only the first load shows skeletons; a refresh keeps the page on screen.
@@ -45,8 +45,8 @@ const alasanTanpaRiwayat = computed(() => {
 })
 /**
  * Why the label cannot be printed yet, or `''` when it can. A label only makes
- * sense once the carrier has issued a waybill, so the button stays visible
- * but disabled until then, with the reason under it.
+ * sense once the carrier has issued a waybill, so the resi card's buttons stay
+ * visible but disabled until then, with the reason under them.
  */
 const alasanTidakCetak = computed(() => {
   if (!order.value) return ''
@@ -97,16 +97,18 @@ const bisaDibatalkan = computed(() =>
   order.value?.stage === 'MENUNGGU_PEMBAYARAN' || order.value?.stage === 'DIPROSES' || order.value?.stage === 'DIJEMPUT'
 )
 
-// The four-step stepper predates the six persisted stages; map onto it.
-const stepsCompleted = computed(() => {
-  switch (order.value?.stage) {
-    case 'MENUNGGU_PEMBAYARAN': return 1
-    case 'DIPROSES': return 2
-    case 'DIJEMPUT': return 3
-    case 'DALAM_PERJALANAN': return 3
-    default: return 4
-  }
-})
+/** Paid and approved: only then is the order worth repeating. */
+const sudahDikonfirmasi = computed(() =>
+  order.value?.stage === 'DIPROSES'
+  || order.value?.stage === 'DIJEMPUT'
+  || order.value?.stage === 'DALAM_PERJALANAN'
+  || order.value?.stage === 'SELESAI'
+)
+
+/** The bottom bar holds only what this stage allows; none at all once cancelled. */
+const adaAksi = computed(() => belumBayar.value || sudahDikonfirmasi.value || bisaDibatalkan.value)
+
+const stepsCompleted = computed(() => stepperCompleted(order.value?.stage))
 
 const pending = ref(false)
 
@@ -125,31 +127,13 @@ function requireConnection(): boolean {
 
 const showPayment = ref(false)
 
-/**
- * Opens the payment steps. Their Order ID is the order's Biteship draft;
- * orders made before drafts existed get one here first.
- */
-async function openPayment() {
-  if (!order.value) return
-  if (order.value.draftId) {
-    showPayment.value = true
-    return
-  }
-  if (!requireConnection()) return
-  pending.value = true
-  try {
-    await $fetch(`/api/orders/${id.value}/draft`, { method: 'POST' })
-    await refresh()
-    showPayment.value = true
-  } catch (error) {
-    toast.add({ title: 'Gagal menyiapkan pembayaran', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
-  } finally {
-    pending.value = false
-  }
+/** Opens the payment steps: transfer, then confirm on WhatsApp. */
+function openPayment() {
+  if (order.value) showPayment.value = true
 }
 
-// The admin confirms the transfer outside the app, so an unpaid order keeps
-// asking while it is on screen; the server checks Biteship on each read.
+// An admin approves the transfer from the admin menu, so an unpaid order keeps
+// asking while it is on screen and moves on as soon as it has been approved.
 const visibility = useDocumentVisibility()
 useIntervalFn(() => {
   if (belumBayar.value && online.value && visibility.value === 'visible' && status.value !== 'pending') {
@@ -162,7 +146,7 @@ watch(() => order.value?.stage, (now, before) => {
   showPayment.value = false
   // A change this page made itself (cancelling) has already been announced.
   if (pending.value) return
-  void invalidateApiData(['orders', 'shipments', 'stats'])
+  void invalidateApiData(['orders', 'stats'])
   if (now === 'BATAL') {
     toast.add({ title: 'Pesanan dibatalkan', color: 'warning' })
   } else {
@@ -175,13 +159,27 @@ watch(() => order.value?.stage, (now, before) => {
   }
 })
 
-async function cancel() {
+const showCancel = ref(false)
+
+/** What cancelling does at this stage, for the confirmation. */
+const keteranganBatal = computed(() => belumBayar.value
+  ? 'Pesanan belum dibayar dan akan dihapus dari antrean. Jangan transfer untuk pesanan ini.'
+  : 'Penjemputan oleh kurir akan dibatalkan. Hubungi Pusat Bantuan untuk pengembalian dana.')
+
+/** Asks first; the API is only called from the confirmation. */
+function askCancel() {
   if (!requireConnection()) return
+  showCancel.value = true
+}
+
+async function cancel() {
+  if (pending.value || !requireConnection()) return
   pending.value = true
   try {
     await $fetch(`/api/orders/${id.value}/cancel`, { method: 'POST' })
+    showCancel.value = false
     await refresh()
-    await invalidateApiData(['orders', 'shipments', 'stats'])
+    await invalidateApiData(['orders', 'stats'])
     toast.add({ title: 'Pesanan dibatalkan' })
   } catch (error) {
     toast.add({ title: 'Gagal membatalkan pesanan', description: apiMessage(error, 'Coba lagi sebentar.'), color: 'error' })
@@ -244,7 +242,8 @@ async function cancel() {
 
     <AppPageContent
       v-else
-      class="mt-5 space-y-5 pb-64"
+      class="mt-5 space-y-5"
+      :class="adaAksi ? 'pb-40' : 'pb-10'"
     >
       <div
         v-if="order.status !== 'batal'"
@@ -311,6 +310,69 @@ async function cancel() {
             {{ order.paidAt }}
           </p>
         </div>
+      </div>
+
+      <!-- Shipping label: print or save it, once the carrier has issued a waybill -->
+      <div
+        v-if="order.stage !== 'BATAL'"
+        class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat"
+      >
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <p class="text-xs font-bold uppercase tracking-wider text-gray-400">
+            Resi Pengiriman
+          </p>
+          <span class="text-xs font-semibold text-gray-400">Label 100 × 150 mm</span>
+        </div>
+        <!-- Neither touches the server, so both stay usable offline. -->
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="relative flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            :disabled="!bisaCetak"
+            :title="alasanTidakCetak || undefined"
+            @click="cetakResi"
+          >
+            <span
+              v-if="bisaCetak"
+              v-ripple
+              class="absolute inset-0 rounded-2xl"
+            />
+            <UIcon
+              name="i-lucide-printer"
+              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
+            />
+            <span class="relative z-10 pointer-events-none">Cetak Resi</span>
+          </button>
+          <button
+            type="button"
+            class="relative flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border-2 border-primary/20 bg-white py-2.5 text-sm font-bold text-primary hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!bisaCetak || mengunduh"
+            :title="alasanTidakCetak || 'Unduh resi sebagai PDF'"
+            @click="unduhResi"
+          >
+            <span
+              v-if="bisaCetak"
+              v-ripple.dark
+              class="absolute inset-0 rounded-2xl"
+            />
+            <UIcon
+              :name="mengunduh ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
+              :class="{ 'animate-spin': mengunduh }"
+            />
+            <span class="relative z-10 pointer-events-none">Unduh Resi</span>
+          </button>
+        </div>
+        <p
+          v-if="alasanTidakCetak"
+          class="mt-3 flex items-center gap-1.5 text-xs font-semibold text-gray-500"
+        >
+          <UIcon
+            name="i-lucide-info"
+            class="size-3.5 shrink-0"
+          />
+          {{ alasanTidakCetak }}
+        </p>
       </div>
 
       <!-- The carrier's own history, synced from Biteship on every load -->
@@ -403,63 +465,15 @@ async function cancel() {
           Nomor Referensi
         </p>
         <dl class="divide-y divide-gray-100">
-          <div class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-            <div class="min-w-0">
-              <dt class="text-xs font-semibold text-gray-400">
-                Resi kurir ({{ courierLabel(order.courierCode) }})
-              </dt>
-              <dd
-                class="mt-0.5 truncate font-mono text-base font-bold"
-                :class="order.awb ? 'text-gray-800' : 'text-gray-400'"
-              >
-                {{ order.awb ?? 'Menunggu dari kurir' }}
-              </dd>
-            </div>
-            <div
-              v-if="order.awb"
-              class="flex shrink-0 gap-2"
-            >
-              <UButton
-                v-if="bisaCetak"
-                icon="i-lucide-printer"
-                color="primary"
-                variant="soft"
-                size="lg"
-                class="font-bold"
-                aria-label="Cetak resi"
-                @click="cetakResi"
-              />
-              <UButton
-                v-if="bisaCetak"
-                icon="i-lucide-download"
-                color="primary"
-                variant="soft"
-                size="lg"
-                class="font-bold"
-                aria-label="Unduh resi (PDF)"
-                :loading="mengunduh"
-                @click="unduhResi"
-              />
-              <UButton
-                :to="{ path: `/lacak/${order.awb}`, query: { courier: order.courierCode } }"
-                color="primary"
-                variant="soft"
-                size="lg"
-                class="font-bold"
-              >
-                Lacak
-              </UButton>
-            </div>
-          </div>
-          <div
-            v-if="order.draftId"
-            class="py-2.5"
-          >
+          <div class="py-2.5 first:pt-0 last:pb-0">
             <dt class="text-xs font-semibold text-gray-400">
-              Order ID
+              Resi kurir ({{ courierLabel(order.courierCode) }})
             </dt>
-            <dd class="mt-0.5 truncate font-mono text-base font-bold text-gray-800">
-              {{ order.draftId }}
+            <dd
+              class="mt-0.5 truncate font-mono text-base font-bold"
+              :class="order.awb ? 'text-gray-800' : 'text-gray-400'"
+            >
+              {{ order.awb ?? 'Menunggu dari kurir' }}
             </dd>
           </div>
           <div
@@ -518,12 +532,29 @@ async function cancel() {
       />
     </AppPageContent>
 
-    <AppStickyBar v-if="order && !loading">
-      <div class="w-full space-y-2">
+    <!-- Only what this stage allows: Bayar while unpaid, Kirim Lagi once the
+         order is confirmed, Batalkan while it can still be called off. -->
+    <AppStickyBar v-if="order && !loading && adaAksi">
+      <div class="flex w-full gap-2">
+        <button
+          v-if="bisaDibatalkan"
+          v-ripple.dark
+          type="button"
+          class="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border-2 border-red-100 bg-white py-3.5 text-base font-bold text-red-500 hover:border-red-200 disabled:opacity-60"
+          :disabled="pending || !online"
+          :title="!online ? 'Butuh koneksi internet' : undefined"
+          @click="askCancel"
+        >
+          <UIcon
+            name="i-lucide-x"
+            class="size-4.5 shrink-0 pointer-events-none"
+          />
+          <span class="pointer-events-none">Batalkan</span>
+        </button>
         <button
           v-if="belumBayar"
           type="button"
-          class="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
+          class="relative flex flex-[1.6] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3.5 text-base font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
           :disabled="pending || !online"
           :title="!online ? 'Butuh koneksi internet' : undefined"
           @click="openPayment"
@@ -534,87 +565,65 @@ async function cancel() {
           />
           <UIcon
             name="i-lucide-wallet"
-            class="relative z-10 size-5 pointer-events-none"
+            class="relative z-10 size-5 shrink-0 pointer-events-none"
           />
-          <span class="relative z-10 pointer-events-none">
-            {{ !online ? 'Butuh koneksi internet' : pending ? 'Memproses...' : `Bayar ${formatRupiah(order.price)}` }}
+          <span class="relative z-10 truncate pointer-events-none">
+            {{ !online ? 'Butuh koneksi' : `Bayar ${formatRupiah(order.price)}` }}
           </span>
         </button>
-        <!-- None of these touch the server, so they stay usable offline. -->
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="relative flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-            :disabled="!bisaCetak"
-            :title="alasanTidakCetak || undefined"
-            @click="cetakResi"
-          >
-            <span
-              v-if="bisaCetak"
-              v-ripple
-              class="absolute inset-0 rounded-2xl"
-            />
-            <UIcon
-              name="i-lucide-printer"
-              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
-            />
-            <span class="relative z-10 pointer-events-none">Cetak Resi</span>
-          </button>
-          <button
-            type="button"
-            class="relative flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-2 border-primary/20 bg-white py-2.5 text-sm font-bold text-primary hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="!bisaCetak || mengunduh"
-            :title="alasanTidakCetak || 'Unduh resi sebagai PDF'"
-            @click="unduhResi"
-          >
-            <span
-              v-if="bisaCetak"
-              v-ripple.dark
-              class="absolute inset-0 rounded-2xl"
-            />
-            <UIcon
-              :name="mengunduh ? 'i-lucide-loader-circle' : 'i-lucide-download'"
-              class="relative z-10 size-4.5 shrink-0 pointer-events-none"
-              :class="{ 'animate-spin': mengunduh }"
-            />
-            <span class="relative z-10 pointer-events-none">Unduh Resi</span>
-          </button>
-          <button
-            v-ripple.dark
-            type="button"
-            class="flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-2 border-primary/20 bg-white py-2.5 text-sm font-bold text-primary hover:border-primary/40"
-            title="Kirim paket baru dengan alamat pengirim dan penerima yang sama"
-            @click="kirimLagi"
-          >
-            <UIcon
-              name="i-lucide-repeat"
-              class="size-4.5 shrink-0 pointer-events-none"
-            />
-            <span class="pointer-events-none">Kirim Lagi</span>
-          </button>
-        </div>
-        <p
-          v-if="alasanTidakCetak"
-          class="flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-gray-500"
-        >
-          <UIcon
-            name="i-lucide-info"
-            class="size-3.5 shrink-0"
-          />
-          {{ alasanTidakCetak }}
-        </p>
+        <!-- Never touches the server, so it stays usable offline. -->
         <button
-          v-if="bisaDibatalkan"
-          v-ripple.dark
+          v-if="sudahDikonfirmasi"
           type="button"
-          class="w-full rounded-2xl border-2 border-red-100 bg-white py-3 text-base font-bold text-red-500 disabled:opacity-60"
-          :disabled="pending || !online"
-          :title="!online ? 'Butuh koneksi internet' : undefined"
-          @click="cancel"
+          class="relative flex flex-[1.6] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3.5 text-base font-bold text-white shadow-lg shadow-primary/20"
+          title="Kirim paket baru dengan alamat pengirim dan penerima yang sama"
+          @click="kirimLagi"
         >
-          {{ online ? 'Batalkan Pesanan' : 'Butuh koneksi internet' }}
+          <span
+            v-ripple
+            class="absolute inset-0 rounded-2xl"
+          />
+          <UIcon
+            name="i-lucide-repeat"
+            class="relative z-10 size-5 shrink-0 pointer-events-none"
+          />
+          <span class="relative z-10 pointer-events-none">Kirim Lagi</span>
         </button>
       </div>
     </AppStickyBar>
+
+    <AppDialog
+      v-model:open="showCancel"
+      title="Batalkan pesanan?"
+      :description="keteranganBatal"
+    >
+      <template #footer>
+        <div class="flex w-full gap-2">
+          <UButton
+            v-ripple.dark
+            color="neutral"
+            variant="soft"
+            size="lg"
+            block
+            class="flex-1"
+            :disabled="pending"
+            @click="showCancel = false"
+          >
+            Kembali
+          </UButton>
+          <UButton
+            v-ripple
+            color="error"
+            size="lg"
+            block
+            class="flex-1 font-bold"
+            :loading="pending"
+            @click="cancel"
+          >
+            Ya, Batalkan
+          </UButton>
+        </div>
+      </template>
+    </AppDialog>
   </div>
 </template>

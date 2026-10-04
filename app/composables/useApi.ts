@@ -1,4 +1,4 @@
-import type { Address, Order, OrderStats, Shipment, User } from '~/types'
+import type { Address, Order, OrderStats, TrackedWaybill, User } from '~/types'
 import { CACHE_STORE, OUTBOX_STORE, idbClear, idbGetAll, idbPut, type CachedEntry } from '~/utils/offline-db'
 
 // Fixed keys so every component that calls one of these shares a single
@@ -17,14 +17,14 @@ import { CACHE_STORE, OUTBOX_STORE, idbClear, idbGetAll, idbPut, type CachedEntr
 // The cache is per session — `clearApiCache()` runs on login and logout so
 // one account never sees another's data.
 
-export const API_KEYS = ['profile', 'addresses', 'orders', 'shipments', 'stats'] as const
+export const API_KEYS = ['profile', 'addresses', 'orders', 'lookups', 'stats'] as const
 export type ApiKey = typeof API_KEYS[number]
 
 const ENDPOINTS: Record<ApiKey, string> = {
   profile: '/api/profile',
   addresses: '/api/addresses',
   orders: '/api/orders',
-  shipments: '/api/shipments',
+  lookups: '/api/lookups',
   stats: '/api/stats'
 }
 
@@ -119,8 +119,9 @@ export function useOrders() {
   return useCached<Order[]>('orders', () => [])
 }
 
-export function useActiveShipments() {
-  return useCached<Shipment[]>('shipments', () => [])
+/** Waybills tracked on Lacak that were not created in this app. */
+export function useTrackedWaybills() {
+  return useCached<TrackedWaybill[]>('lookups', () => [])
 }
 
 export function useOrderStats() {
@@ -207,7 +208,7 @@ export async function clearOfflineStores(): Promise<void> {
  */
 export function prefetchApiData(): void {
   const nuxtApp = useNuxtApp()
-  const keys: ApiKey[] = ['profile', 'shipments', 'orders', 'addresses']
+  const keys: ApiKey[] = ['profile', 'orders', 'addresses']
 
   for (const key of keys) {
     const promise = $fetch(ENDPOINTS[key])

@@ -4,6 +4,9 @@
  * element at a time and explains it in a card beside it. Targets are found by
  * `data-tour="<target>"`, so the page only tags its elements.
  *
+ * With `welcome`, it opens on a centred greeting over the dimmed screen and
+ * only moves to the first spotlight when the user chooses to start.
+ *
  * It runs once per account on this device — finishing or skipping both mark
  * it seen in localStorage. Storage can be missing (private mode, cleared site
  * data); the tour then simply shows again next time, which is harmless.
@@ -19,13 +22,20 @@ export interface TourStep {
   body: string
 }
 
+export interface TourWelcome {
+  title: string
+  body: string
+}
+
 const props = withDefaults(defineProps<{
   steps: TourStep[]
   /** Identifies this tour in storage; bump it to show a changed tour again. */
   name: string
+  /** A centred greeting shown before the first step. */
+  welcome?: TourWelcome
   /** Wait before starting, so the page transition and first paint settle. */
   delay?: number
-}>(), { delay: 700 })
+}>(), { welcome: undefined, delay: 700 })
 
 const authUser = useAuthUser()
 const storageKey = computed(() => `suklog:tour:${props.name}:${authUser.value?.id ?? 'anon'}`)
@@ -47,6 +57,8 @@ function markSeen(): void {
 }
 
 const active = ref(false)
+/** On the welcome card, before any spotlight. */
+const intro = ref(false)
 const index = ref(0)
 const step = computed(() => props.steps[index.value])
 const isLast = computed(() => index.value === props.steps.length - 1)
@@ -121,6 +133,16 @@ function show(i: number): void {
 function start(): void {
   if (!props.steps.length) return
   active.value = true
+  if (props.welcome) {
+    intro.value = true
+    return
+  }
+  begin()
+}
+
+/** Leaves the welcome card (if any) for the first spotlight. */
+function begin(): void {
+  intro.value = false
   show(0)
   cancelAnimationFrame(frame)
   frame = requestAnimationFrame(track)
@@ -129,6 +151,7 @@ function start(): void {
 function finish(): void {
   markSeen()
   active.value = false
+  intro.value = false
   spot.value = null
   settled.value = false
   clearTimeout(settleTimer)
@@ -148,7 +171,9 @@ function back(): void {
 function onKey(event: KeyboardEvent): void {
   if (!active.value) return
   if (event.key === 'Escape') finish()
-  else if (event.key === 'ArrowRight') next()
+  else if (intro.value) {
+    if (event.key === 'ArrowRight' || event.key === 'Enter') begin()
+  } else if (event.key === 'ArrowRight') next()
   else if (event.key === 'ArrowLeft') back()
 }
 
@@ -179,14 +204,74 @@ onBeforeUnmount(() => {
         class="fixed inset-0 z-[100] touch-none"
         role="dialog"
         aria-modal="true"
-        :aria-label="step.title"
+        :aria-label="intro && welcome ? welcome.title : step.title"
         @wheel.prevent
       >
         <!-- Swallows taps so nothing under the dim layer reacts. -->
         <div class="absolute inset-0" />
 
+        <!-- Welcome: the whole screen dimmed, the greeting in the middle. -->
+        <Transition
+          enter-active-class="transition duration-300 ease-out"
+          leave-active-class="transition duration-200 ease-in"
+          enter-from-class="opacity-0 scale-95"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div
+            v-if="intro && welcome"
+            class="absolute inset-0 flex items-center justify-center bg-[rgb(0_15_31/0.62)] p-4"
+          >
+            <div class="w-[min(24rem,100%)] overflow-hidden rounded-3xl bg-white text-center shadow-2xl">
+              <div class="relative overflow-hidden bg-linear-135 from-[#002144] via-[#003366] to-[#004080] px-6 pt-8 pb-6">
+                <div class="absolute top-0 right-0 size-40 -translate-y-1/3 translate-x-1/4 rounded-full bg-white/5" />
+                <div class="absolute bottom-0 left-0 size-28 translate-y-1/3 -translate-x-1/4 rounded-full bg-white/5" />
+                <div class="relative mx-auto flex size-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                  <UIcon
+                    name="i-lucide-package"
+                    class="size-8 text-white"
+                  />
+                </div>
+              </div>
+              <div class="px-6 pt-5 pb-6">
+                <h2 class="text-xl font-bold text-gray-800">
+                  {{ welcome.title }}
+                </h2>
+                <p class="mt-2 text-sm leading-relaxed text-gray-500">
+                  {{ welcome.body }}
+                </p>
+                <p class="mt-3 text-xs font-semibold text-primary">
+                  {{ steps.length }} langkah singkat
+                </p>
+                <div class="mt-5 flex flex-col gap-2">
+                  <UButton
+                    v-ripple
+                    size="xl"
+                    block
+                    class="font-bold"
+                    trailing-icon="i-lucide-arrow-right"
+                    @click="begin"
+                  >
+                    Mulai Tur
+                  </UButton>
+                  <UButton
+                    v-ripple.dark
+                    color="neutral"
+                    variant="ghost"
+                    size="lg"
+                    block
+                    class="font-semibold text-gray-400"
+                    @click="finish"
+                  >
+                    Lewati
+                  </UButton>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
         <div
-          v-if="spot"
+          v-if="spot && !intro"
           class="pointer-events-none absolute rounded-2xl ring-2 ring-white/70"
           :class="settled ? 'transition-all duration-300 ease-out' : ''"
           :style="{
@@ -199,6 +284,7 @@ onBeforeUnmount(() => {
         />
 
         <div
+          v-show="!intro"
           ref="card"
           class="absolute w-[min(20rem,calc(100vw-2rem))] rounded-2xl bg-white p-4 shadow-2xl"
           :class="settled ? 'transition-[top,left] duration-300 ease-out' : 'invisible'"

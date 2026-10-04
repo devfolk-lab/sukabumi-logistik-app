@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import type { SessionUser } from '#shared/types'
+import type { Role, SessionUser } from '#shared/types'
 import type { Profile, User } from '../generated/prisma/client'
 import { hashToken, newToken } from './auth-tokens'
 import { prisma } from './prisma'
@@ -25,6 +25,7 @@ const RENEW_MS = 15 * 24 * 60 * 60 * 1000
 interface CachedSession {
   profile: Profile
   userId: string
+  role: Role
   cachedUntil: number
 }
 
@@ -44,6 +45,16 @@ function remember(id: string, entry: CachedSession): void {
 export function forgetProfile(id: string): void {
   for (const [key, entry] of cache) {
     if (entry.profile.id === id) cache.delete(key)
+  }
+}
+
+/**
+ * Drops every cached session of a user, so a changed role applies on their
+ * next request here. Another instance may keep the old role up to `CACHE_TTL`.
+ */
+export function forgetUser(userId: string): void {
+  for (const [key, entry] of cache) {
+    if (entry.userId === userId) cache.delete(key)
   }
 }
 
@@ -99,6 +110,7 @@ export async function revokeSessions(userId: string, keepId?: string): Promise<v
 export interface AuthContext {
   sessionId: string
   profile: Profile
+  role: Role
 }
 
 /** The signed-in account behind this request's cookie, or null. */
@@ -108,7 +120,7 @@ export async function resolveSession(event: H3Event): Promise<AuthContext | null
 
   const id = hashToken(token)
   const cached = cache.get(id)
-  if (cached && cached.cachedUntil > Date.now()) return { sessionId: id, profile: cached.profile }
+  if (cached && cached.cachedUntil > Date.now()) return { sessionId: id, profile: cached.profile, role: cached.role }
 
   const session = await prisma.session.findUnique({
     where: { id },
@@ -131,9 +143,10 @@ export async function resolveSession(event: H3Event): Promise<AuthContext | null
   }
 
   const profile = session.user.profile ?? await createProfile(session.user)
-  remember(id, { profile, userId: session.userId, cachedUntil: now + CACHE_TTL })
+  const role = session.user.role
+  remember(id, { profile, userId: session.userId, role, cachedUntil: now + CACHE_TTL })
 
-  return { sessionId: id, profile }
+  return { sessionId: id, profile, role }
 }
 
 /** Accounts always get a profile at sign-up; this only covers one that lost it. */
@@ -152,6 +165,17 @@ export async function requireProfile(event: H3Event): Promise<Profile> {
   return auth.profile
 }
 
-export function toSessionUser(profile: Pick<Profile, 'id' | 'email' | 'nama'>): SessionUser {
-  return { id: profile.id, email: profile.email, nama: profile.nama }
+/**
+ * Guards the admin routes: the caller's session, or 401 when signed out and
+ * 403 when the account's role is not allowed.
+ */
+export async function requireRole(event: H3Event, allowed: (role: Role) => boolean): Promise<AuthContext> {
+  const auth = await resolveSession(event)
+  if (!auth) throw createError({ statusCode: 401, statusMessage: 'Silakan masuk terlebih dahulu' })
+  if (!allowed(auth.role)) throw createError({ statusCode: 403, statusMessage: 'Akun kamu tidak punya akses ke menu ini' })
+  return auth
+}
+
+export function toSessionUser(profile: Pick<Profile, 'id' | 'email' | 'nama'>, role: Role): SessionUser {
+  return { id: profile.id, email: profile.email, nama: profile.nama, role }
 }

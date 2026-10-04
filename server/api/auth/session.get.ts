@@ -7,5 +7,5 @@ import { resolveSession, toSessionUser } from '../../utils/auth'
  */
 export default defineEventHandler(async (event): Promise<{ user: SessionUser | null }> => {
   const auth = await resolveSession(event)
-  return { user: auth ? toSessionUser(auth.profile) : null }
+  return { user: auth ? toSessionUser(auth.profile, auth.role) : null }
 })

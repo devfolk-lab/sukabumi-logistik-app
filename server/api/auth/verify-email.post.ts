@@ -24,5 +24,5 @@ export default defineEventHandler(async (event): Promise<{ user: SessionUser }> 
   })
 
   await startSession(event, user.id)
-  return { user: toSessionUser(user.profile ?? { id: user.id, email: user.email, nama: user.email.split('@')[0] || 'Pengguna' }) }
+  return { user: toSessionUser(user.profile ?? { id: user.id, email: user.email, nama: user.email.split('@')[0] || 'Pengguna' }, user.role) }
 })
