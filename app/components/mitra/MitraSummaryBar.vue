@@ -26,8 +26,11 @@ const booking = useBookingStore()
           </p>
         </div>
       </div>
-      <p class="ml-2 shrink-0 text-2xl font-extrabold text-primary">
-        {{ formatRupiah(booking.ongkir) }}
+      <p
+        class="ml-2 shrink-0 font-extrabold text-primary"
+        :class="booking.ongkir === null ? 'text-base' : 'text-2xl'"
+      >
+        {{ formatOngkir(booking.ongkir, 'Via WhatsApp') }}
       </p>
     </div>
   </div>

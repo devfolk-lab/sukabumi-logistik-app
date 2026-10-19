@@ -10,6 +10,8 @@ const props = defineProps<{
   code: string
   brand?: CourierBrand
   label?: string
+  /** Drop the inset around the logo, for boxes that already have their own (the shipping label). */
+  flush?: boolean
 }>()
 
 const brand = computed(() => props.brand ?? courierBrand(props.code))
@@ -36,7 +38,8 @@ const style = computed(() => onBrand.value
       v-if="showLogo"
       :src="brand.logo"
       :alt="label ?? courierLabel(code, code)"
-      class="size-full object-contain p-[14%]"
+      class="size-full object-contain"
+      :class="!flush ? 'p-[14%]' : onBrand ? 'p-[6%]' : ''"
       draggable="false"
       @error="failed = true"
     >

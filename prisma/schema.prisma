@@ -159,13 +159,16 @@ model Order {
   weightGram Int
 
   // `total` equals `shippingCost` today; kept separate so surcharges can be
-  // added later without rewriting history.
-  shippingCost Int
-  total        Int
+  // added later without rewriting history. Both are null for an Antar
+  // Langsung order (our own courier, `courierCode` "sukabumi") until an admin
+  // sets the price agreed with the customer on WhatsApp.
+  shippingCost Int?
+  total        Int?
 
-  // Paid by manual bank transfer: an admin checks the transfer and approves
-  // the order in the admin menu, which books it on Biteship and records
-  // "TRANSFER". Orders from the earlier demo checkout carry "DEMO".
+  // Paid by bank transfer, QRIS or cash at the outlet, all checked by hand: an
+  // admin approves the order in the admin menu, which books it on Biteship
+  // and records "TRANSFER", "QRIS" or "TUNAI". Orders from the earlier demo
+  // checkout carry "DEMO".
   paymentMethod String?
   paidAt        DateTime?
 

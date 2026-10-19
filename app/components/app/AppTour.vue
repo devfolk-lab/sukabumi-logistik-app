@@ -8,7 +8,8 @@
  * only moves to the first spotlight when the user chooses to start.
  *
  * It runs once per account on this device — finishing or skipping both mark
- * it seen in localStorage. Storage can be missing (private mode, cleared site
+ * it seen in localStorage. The page can replay it any time through the
+ * exposed `start()`. Storage can be missing (private mode, cleared site
  * data); the tour then simply shows again next time, which is harmless.
  *
  * Deliberately dependency-free: the spotlight is a box-shadow around a
@@ -131,7 +132,9 @@ function show(i: number): void {
 }
 
 function start(): void {
+  clearTimeout(timer)
   if (!props.steps.length) return
+  index.value = 0
   active.value = true
   if (props.welcome) {
     intro.value = true
@@ -189,6 +192,8 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frame)
   window.removeEventListener('keydown', onKey)
 })
+
+defineExpose({ start })
 </script>
 
 <template>

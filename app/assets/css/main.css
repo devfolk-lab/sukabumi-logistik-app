@@ -68,6 +68,65 @@
   }
 }
 
+/* Antar Langsung, our own courier, is meant to stand out among the carriers:
+   a gold border that keeps circling (`antar-card`), a light sweep across
+   its face (`antar-shine`), and a soft gold pulse (`antar-glow`). All of it
+   stops under reduced motion; the colours alone still set it apart. */
+@property --antar-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes antar-spin {
+  to { --antar-angle: 360deg; }
+}
+
+@keyframes antar-sweep {
+  0%, 55% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}
+
+@keyframes antar-pulse {
+  0%, 100% { box-shadow: 0 10px 28px -12px rgb(212 161 36 / 0.35), 0 0 0 0 rgb(212 161 36 / 0.35); }
+  50% { box-shadow: 0 14px 34px -10px rgb(212 161 36 / 0.55), 0 0 0 6px rgb(212 161 36 / 0); }
+}
+
+.antar-card {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--antar-fill, #fff), var(--antar-fill, #fff)) padding-box,
+    conic-gradient(from var(--antar-angle), #d4a124, #002144 25%, #f0c65a 50%, #004080 75%, #d4a124) border-box;
+  animation: antar-spin 4s linear infinite, antar-pulse 2.8s ease-in-out infinite;
+}
+
+.antar-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.antar-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  animation: antar-sweep 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.antar-glow {
+  animation: antar-pulse 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .antar-card,
+  .antar-glow,
+  .antar-shine::after {
+    animation: none;
+  }
+}
+
 @utility hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

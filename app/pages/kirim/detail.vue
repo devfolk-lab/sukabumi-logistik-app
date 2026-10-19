@@ -11,6 +11,7 @@ if (!booking.hasCourier || !booking.hasRoute) {
 }
 
 const courier = computed(() => booking.selectedCourier)
+const antarLangsung = computed(() => isAntarLangsung(courier.value?.code))
 
 const pending = ref(false)
 
@@ -69,7 +70,9 @@ async function checkout() {
 
     toast.add({
       title: 'Pesanan dibuat',
-      description: 'Ketuk Bayar untuk melihat cara pembayaran.'
+      description: isAntarLangsung(order.courierCode)
+        ? 'Kirim pesan WhatsApp ke admin untuk menyepakati ongkir.'
+        : 'Ketuk Bayar untuk melihat cara pembayaran.'
     })
 
     await navigateTo(`/riwayat/${order.id}`, { replace: true })
@@ -146,8 +149,11 @@ async function checkout() {
                 {{ formatEtd(courier.etd) }}
               </p>
             </div>
-            <p class="shrink-0 text-xl font-extrabold text-primary">
-              {{ formatRupiah(booking.ongkir) }}
+            <p
+              class="shrink-0 font-extrabold text-primary"
+              :class="antarLangsung ? 'text-sm' : 'text-xl'"
+            >
+              {{ formatOngkir(booking.ongkir, 'Via WhatsApp') }}
             </p>
           </div>
         </div>
@@ -290,7 +296,7 @@ async function checkout() {
               Ongkir {{ courier.name }} {{ courier.service }}
             </dt>
             <dd class="font-semibold tabular-nums">
-              {{ formatRupiah(booking.ongkir) }}
+              {{ formatOngkir(booking.ongkir, 'Via WhatsApp') }}
             </dd>
           </div>
           <div class="my-4 border-t border-dashed border-white/20" />
@@ -299,12 +305,15 @@ async function checkout() {
               <dt class="text-sm font-semibold text-white/70">
                 Total Pembayaran
               </dt>
-              <dd class="mt-0.5 text-3xl font-extrabold tabular-nums">
-                {{ formatRupiah(booking.total) }}
+              <dd
+                class="mt-0.5 font-extrabold tabular-nums"
+                :class="antarLangsung ? 'text-xl' : 'text-3xl'"
+              >
+                {{ formatOngkir(booking.total, 'Ditetapkan admin') }}
               </dd>
             </div>
             <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">
-              Tarif resmi kurir
+              {{ antarLangsung ? 'Disepakati via WhatsApp' : 'Tarif resmi kurir' }}
             </span>
           </div>
         </dl>
@@ -324,7 +333,7 @@ async function checkout() {
           class="absolute inset-0 rounded-2xl"
         />
         <span class="relative z-10 pointer-events-none">
-          {{ !online ? 'Butuh koneksi internet' : pending ? 'Membuat pesanan...' : `Buat Pesanan · ${formatRupiah(booking.total)}` }}
+          {{ !online ? 'Butuh koneksi internet' : pending ? 'Membuat pesanan...' : antarLangsung ? 'Buat Pesanan' : `Buat Pesanan · ${formatOngkir(booking.total)}` }}
         </span>
       </button>
     </AppStickyBar>
@@ -354,8 +363,11 @@ async function checkout() {
                 {{ formatEtd(courier.etd) }}
               </p>
             </div>
-            <p class="shrink-0 text-xl font-extrabold text-primary">
-              {{ formatRupiah(booking.total) }}
+            <p
+              class="shrink-0 font-extrabold text-primary"
+              :class="antarLangsung ? 'text-sm' : 'text-xl'"
+            >
+              {{ formatOngkir(booking.total, 'Via WhatsApp') }}
             </p>
           </div>
 
@@ -391,7 +403,7 @@ async function checkout() {
               name="i-lucide-info"
               class="mt-0.5 size-3.5 shrink-0"
             />
-            Setelah dibuat, transfer sesuai total lalu konfirmasi lewat WhatsApp. Pesanan diteruskan ke kurir setelah admin memverifikasi pembayaran.
+            Setelah dibuat, bayar lewat transfer bank, QRIS, atau tunai di gerai. Pesanan diteruskan ke kurir setelah admin memverifikasi pembayaran.
           </p>
         </div>
       </template>

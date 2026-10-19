@@ -46,7 +46,8 @@ export const useBookingStore = defineStore('booking', () => {
     items.value.length ? items.value.map(itemProblem).find(Boolean) ?? '' : 'Tambahkan minimal satu barang.'
   )
 
-  const ongkir = computed(() => selectedCourier.value?.cost ?? 0)
+  // Null for Antar Langsung, whose price an admin sets after the order is made.
+  const ongkir = computed(() => selectedCourier.value?.cost ?? null)
   const total = computed(() => ongkir.value)
 
   function selectCourier(courier: Courier | null): void {

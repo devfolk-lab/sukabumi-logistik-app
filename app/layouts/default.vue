@@ -46,5 +46,6 @@ async function pullRefresh() {
       </div>
     </div>
     <AppBottomNav />
+    <AppIosInstallDialog />
   </div>
 </template>

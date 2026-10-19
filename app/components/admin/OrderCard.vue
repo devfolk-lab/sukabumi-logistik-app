@@ -9,6 +9,9 @@ const props = defineProps<{ order: AdminOrder }>()
 defineEmits<{ approve: [order: AdminOrder], reject: [order: AdminOrder] }>()
 
 const waiting = computed(() => props.order.stage === 'MENUNGGU_PEMBAYARAN')
+const antarLangsung = computed(() => isAntarLangsung(props.order.courierCode))
+/** Antar Langsung without a price cannot be approved yet; its page sets one. */
+const needsPrice = computed(() => waiting.value && antarLangsung.value && props.order.price === null)
 
 const stageMeta = computed(() => {
   switch (props.order.stage) {
@@ -48,6 +51,16 @@ const stageMeta = computed(() => {
           <p class="mt-0.5 truncate text-sm text-gray-500">
             {{ order.customer.nama }} · {{ order.customer.email }}
           </p>
+          <span
+            v-if="antarLangsung"
+            class="mt-1.5 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-extrabold text-primary"
+          >
+            <UIcon
+              name="i-lucide-sparkles"
+              class="size-3"
+            />
+            Antar Langsung
+          </span>
           <p class="mt-1 truncate text-sm font-semibold text-gray-700">
             {{ order.pickup }} → {{ order.delivery }}
           </p>
@@ -60,7 +73,10 @@ const stageMeta = computed(() => {
                 {{ formatWaktu(order.createdAt) }}
               </p>
             </div>
-            <span class="shrink-0 text-base font-extrabold text-primary">{{ formatRupiah(order.price) }}</span>
+            <span
+              class="shrink-0 font-extrabold"
+              :class="order.price === null ? 'text-sm text-amber-600' : 'text-base text-primary'"
+            >{{ formatOngkir(order.price, 'Ongkir belum diatur') }}</span>
           </div>
           <p
             v-if="order.approvedBy"
@@ -88,6 +104,19 @@ const stageMeta = computed(() => {
         Tolak
       </UButton>
       <UButton
+        v-if="needsPrice"
+        v-ripple
+        :to="`/admin/pesanan/${order.id}`"
+        color="secondary"
+        size="lg"
+        block
+        class="flex-1 font-bold"
+        icon="i-lucide-badge-dollar-sign"
+      >
+        Atur Ongkir
+      </UButton>
+      <UButton
+        v-else
         v-ripple
         color="primary"
         size="lg"

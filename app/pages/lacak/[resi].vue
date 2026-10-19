@@ -33,6 +33,12 @@ registerPageRefresh(async () => {
   await refresh()
 })
 
+// Opened offline with nothing cached: look it up as soon as the connection is back.
+const online = useOnline()
+watch(online, (isOnline) => {
+  if (isOnline && error.value) void refresh()
+})
+
 // Orders placed here belong to Riwayat, which has their payment and label too.
 // Anything else was just recorded in the Lacak history, so that list refetches.
 watch(shipment, (now) => {
@@ -109,6 +115,15 @@ async function salinResi() {
       class="mt-5 pb-10"
     >
       <AppNotFound
+        v-if="!online"
+        offline
+        title="Belum tersedia offline"
+        description="Resi ini belum pernah dilacak di perangkat ini. Pelacakan akan dimuat otomatis begitu kembali online."
+        back-label="Kembali ke Lacak Pengiriman"
+        back-to="/lacak"
+      />
+      <AppNotFound
+        v-else
         title="Resi tidak ditemukan"
         :description="apiMessage(error, 'Periksa lagi nomor resinya, atau cari dari daftar paket yang sedang berjalan.')"
         back-label="Kembali ke Lacak Pengiriman"

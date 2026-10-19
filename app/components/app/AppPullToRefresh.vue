@@ -113,7 +113,7 @@ useEventListener(root, 'touchcancel', onTouchEnd, { passive: true })
 <template>
   <div ref="root">
     <div
-      class="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center"
+      class="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top)] z-50 flex justify-center"
       :style="indicatorStyle"
     >
       <span class="flex size-9 items-center justify-center rounded-full bg-white shadow-card">

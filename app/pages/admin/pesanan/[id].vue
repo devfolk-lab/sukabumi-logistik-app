@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminOrder, Shipment } from '~/types'
+import type { AdminOrder, OrderStage, Shipment } from '~/types'
 
 /**
  * One customer's order, for the admins: our record, Biteship's booking once it
@@ -52,6 +52,75 @@ const routePoints = computed(() => order.value
 
 const showApprove = ref(false)
 const showReject = ref(false)
+const toast = useToast()
+
+/** Our own courier: priced here after the WhatsApp chat, and moved along by hand. */
+const antarLangsung = computed(() => isAntarLangsung(order.value?.courierCode))
+const needsPrice = computed(() => waiting.value && antarLangsung.value && order.value?.price === null)
+
+const priceInput = ref<number | undefined>()
+const savingPrice = ref(false)
+watch(() => order.value?.price, (price) => {
+  priceInput.value = price ?? undefined
+}, { immediate: true })
+
+const priceError = computed(() => {
+  if (priceInput.value === undefined) return undefined
+  if (!Number.isInteger(priceInput.value) || priceInput.value < 1000) return 'Minimal Rp 1.000, tanpa desimal'
+  return undefined
+})
+
+async function savePrice() {
+  if (!order.value || savingPrice.value || priceInput.value === undefined || priceError.value) return
+  savingPrice.value = true
+  try {
+    await $fetch<AdminOrder>(`/api/admin/orders/${order.value.id}/price`, {
+      method: 'POST',
+      body: { price: priceInput.value }
+    })
+    toast.add({
+      title: 'Ongkir disimpan',
+      description: `${formatRupiah(priceInput.value)} sekarang tampil di pesanan pelanggan.`,
+      color: 'success',
+      icon: 'i-lucide-circle-check'
+    })
+    await refresh()
+  } catch (err) {
+    handleUnauthorized(err)
+    toast.add({ title: 'Gagal menyimpan ongkir', description: apiMessage(err, 'Coba lagi sebentar.'), color: 'error' })
+  } finally {
+    savingPrice.value = false
+  }
+}
+
+/** The next step of an approved Antar Langsung order, if it has one. */
+const NEXT_STEP: Partial<Record<OrderStage, { stage: OrderStage, label: string, icon: string, hint: string }>> = {
+  DIPROSES: { stage: 'DIJEMPUT', label: 'Tandai Sudah Dijemput', icon: 'i-lucide-package-check', hint: 'Kurir kita sudah mengambil paket dari pengirim.' },
+  DIJEMPUT: { stage: 'DALAM_PERJALANAN', label: 'Tandai Sedang Diantar', icon: 'i-lucide-truck', hint: 'Paket sedang dalam perjalanan ke penerima.' },
+  DALAM_PERJALANAN: { stage: 'SELESAI', label: 'Tandai Sudah Diterima', icon: 'i-lucide-house', hint: 'Paket sudah diterima di alamat tujuan.' }
+}
+const nextStep = computed(() => antarLangsung.value && order.value ? NEXT_STEP[order.value.stage] ?? null : null)
+const stepNote = ref('')
+const advancing = ref(false)
+
+async function advance() {
+  if (!order.value || !nextStep.value || advancing.value) return
+  advancing.value = true
+  try {
+    await $fetch<AdminOrder>(`/api/admin/orders/${order.value.id}/stage`, {
+      method: 'POST',
+      body: { stage: nextStep.value.stage, ...(stepNote.value.trim() ? { note: stepNote.value.trim() } : {}) }
+    })
+    stepNote.value = ''
+    toast.add({ title: 'Status diperbarui', color: 'success', icon: 'i-lucide-circle-check' })
+    await refresh()
+  } catch (err) {
+    handleUnauthorized(err)
+    toast.add({ title: 'Gagal memperbarui status', description: apiMessage(err, 'Coba lagi sebentar.'), color: 'error' })
+  } finally {
+    advancing.value = false
+  }
+}
 
 async function settled() {
   await refresh()
@@ -117,7 +186,55 @@ async function settled() {
     >
       <!-- Where the payment stands -->
       <div
-        v-if="waiting"
+        v-if="needsPrice"
+        class="antar-glow relative overflow-hidden rounded-3xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-5 text-white"
+      >
+        <div class="flex items-start gap-3">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+            <UIcon
+              name="i-lucide-sparkles"
+              class="size-5"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-bold">
+              Kurir spesial Antar Langsung · ongkir belum diatur
+            </p>
+            <p class="mt-0.5 text-sm text-white/75">
+              Sepakati ongkir dengan pelanggan lewat WhatsApp, lalu isi di bawah. Harganya langsung tampil di pesanan pelanggan, dan pesanan bisa disetujui setelah dibayar.
+            </p>
+          </div>
+        </div>
+        <form
+          class="mt-4 flex items-start gap-2"
+          @submit.prevent="savePrice"
+        >
+          <UFormField
+            :error="priceError"
+            class="min-w-0 flex-1"
+          >
+            <AppRupiahInput
+              v-model="priceInput"
+              size="xl"
+              placeholder="Ongkir, contoh 25.000"
+              class="w-full"
+            />
+          </UFormField>
+          <UButton
+            v-ripple.dark
+            type="submit"
+            color="secondary"
+            size="xl"
+            class="shrink-0 font-bold"
+            :loading="savingPrice"
+            :disabled="priceInput === undefined || Boolean(priceError)"
+          >
+            Simpan
+          </UButton>
+        </form>
+      </div>
+      <div
+        v-else-if="waiting"
         class="flex items-start gap-3 rounded-3xl border border-amber-100 bg-amber-50 p-5"
       >
         <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
@@ -131,8 +248,35 @@ async function settled() {
             Menunggu pembayaran
           </p>
           <p class="mt-0.5 text-sm text-amber-700">
-            Cocokkan transfer <span class="font-bold">{{ formatRupiah(order.price) }}</span> dengan bukti yang dikirim pelanggan lewat WhatsApp, lalu setujui. Pesanan baru dibuat di Biteship setelah disetujui.
+            Cocokkan pembayaran <span class="font-bold">{{ formatOngkir(order.price) }}</span> dengan bukti transfer atau QRIS yang dikirim pelanggan lewat WhatsApp, atau terima tunai di gerai, lalu setujui.
+            {{ antarLangsung ? 'Pesanan lalu diserahkan ke kurir Antar Langsung kita.' : 'Pesanan baru dibuat di Biteship setelah disetujui.' }}
           </p>
+          <form
+            v-if="antarLangsung"
+            class="mt-3 flex items-start gap-2"
+            @submit.prevent="savePrice"
+          >
+            <UFormField
+              :error="priceError"
+              class="min-w-0 flex-1"
+            >
+              <AppRupiahInput
+                v-model="priceInput"
+                class="w-full"
+              />
+            </UFormField>
+            <UButton
+              v-ripple.dark
+              type="submit"
+              color="neutral"
+              variant="outline"
+              class="shrink-0 font-bold"
+              :loading="savingPrice"
+              :disabled="priceInput === undefined || Boolean(priceError) || priceInput === order.price"
+            >
+              Ubah Ongkir
+            </UButton>
+          </form>
         </div>
       </div>
       <div
@@ -161,6 +305,12 @@ async function settled() {
           </p>
           <p class="text-sm text-emerald-700">
             {{ order.approvedBy ? `Disetujui ${order.approvedBy} · ${order.approvedAt}` : order.paidAt }}
+          </p>
+          <p
+            v-if="order.paymentMethod"
+            class="text-sm text-emerald-700"
+          >
+            Dibayar lewat {{ order.paymentMethod }}
           </p>
         </div>
       </div>
@@ -204,10 +354,82 @@ async function settled() {
       <!-- Biteship booking -->
       <div class="rounded-3xl bg-white p-5 shadow-card lg:shadow-card-flat">
         <p class="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">
-          Biteship
+          {{ antarLangsung ? 'Kurir Antar Langsung' : 'Biteship' }}
         </p>
+        <div
+          v-if="antarLangsung"
+          class="space-y-4"
+        >
+          <dl class="divide-y divide-gray-100 text-sm">
+            <div class="flex justify-between gap-3 py-2 first:pt-0">
+              <dt class="shrink-0 text-gray-400">
+                Resi
+              </dt>
+              <dd class="truncate font-mono font-semibold text-gray-800">
+                {{ order.resi }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3 py-2 last:pb-0">
+              <dt class="shrink-0 text-gray-400">
+                Ongkir
+              </dt>
+              <dd class="truncate font-semibold text-gray-800">
+                {{ formatOngkir(order.price, 'Belum diatur') }}
+              </dd>
+            </div>
+          </dl>
+          <p
+            v-if="waiting || order.stage === 'BATAL'"
+            class="flex items-start gap-3 rounded-2xl bg-gray-50 p-3 text-sm text-gray-500"
+          >
+            <UIcon
+              name="i-lucide-info"
+              class="mt-0.5 size-4 shrink-0 text-gray-400"
+            />
+            Dikirim kurir kita sendiri, tanpa Biteship. Statusnya diperbarui manual di sini setelah disetujui.
+          </p>
+          <div
+            v-else-if="nextStep"
+            class="rounded-2xl border border-gold-100 bg-gold-50 p-4"
+          >
+            <p class="text-sm font-bold text-gold-900">
+              Perbarui status · sekarang {{ stageLabel(order.stage).toLowerCase() }}
+            </p>
+            <p class="mt-0.5 text-sm text-gold-800">
+              {{ nextStep.hint }}
+            </p>
+            <UInput
+              v-model="stepNote"
+              placeholder="Catatan untuk pelanggan (opsional)"
+              maxlength="300"
+              class="mt-3 w-full"
+            />
+            <UButton
+              v-ripple
+              color="primary"
+              size="lg"
+              block
+              class="mt-2 font-bold"
+              :icon="nextStep.icon"
+              :loading="advancing"
+              @click="advance"
+            >
+              {{ nextStep.label }}
+            </UButton>
+          </div>
+          <p
+            v-else
+            class="flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700"
+          >
+            <UIcon
+              name="i-lucide-badge-check"
+              class="size-4 shrink-0"
+            />
+            Paket sudah diterima.
+          </p>
+        </div>
         <p
-          v-if="!order.biteshipOrderId"
+          v-else-if="!order.biteshipOrderId"
           class="flex items-start gap-3 rounded-2xl bg-gray-50 p-3 text-sm text-gray-500"
         >
           <UIcon
@@ -249,7 +471,7 @@ async function settled() {
               Dibayar pelanggan
             </dt>
             <dd class="truncate font-semibold text-gray-800">
-              {{ formatRupiah(order.price) }}
+              {{ formatOngkir(order.price) }}
             </dd>
           </div>
         </dl>
@@ -349,6 +571,8 @@ async function settled() {
           block
           class="flex-1 font-bold"
           icon="i-lucide-check"
+          :disabled="needsPrice"
+          :title="needsPrice ? 'Atur ongkir dulu' : undefined"
           @click="showApprove = true"
         >
           Setujui

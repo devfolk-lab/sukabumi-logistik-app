@@ -12,25 +12,9 @@ const { enqueue } = useOutbox()
 
 // --- Pasang aplikasi ---------------------------------------------------------
 
-const { $pwa } = useNuxtApp()
-
-// iOS has no `beforeinstallprompt`, so Safari users get instructions rather
-// than a button that could never do anything.
-const isIos = computed(() => import.meta.client && /iphone|ipad|ipod/i.test(navigator.userAgent))
-const showIosInstall = ref(false)
-
-const showInstallSection = computed(() => {
-  if ($pwa?.isPWAInstalled) return false
-  return Boolean($pwa?.showInstallPrompt) || isIos.value
-})
-
-async function install() {
-  if (isIos.value) {
-    showIosInstall.value = true
-    return
-  }
-  await $pwa?.install()
-}
+// Offered here even after the home card was dismissed. On iOS the button opens
+// the Add-to-Home-Screen steps (`AppIosInstallDialog`, in the default layout).
+const { canInstall: showInstallSection, install } = useInstallApp()
 
 /** Shows the inline "Tersimpan." next to the button for a moment. */
 function flash(flag: Ref<boolean>) {
@@ -419,19 +403,5 @@ async function savePassword() {
         </section>
       </template>
     </AppPageContent>
-
-    <AppDialog
-      v-model:open="showIosInstall"
-      title="Pasang di iPhone"
-      description="Safari belum mendukung pemasangan otomatis."
-    >
-      <template #body>
-        <ol class="space-y-3 p-5 text-sm text-gray-600">
-          <li>1. Tap tombol Bagikan di bagian bawah layar Safari.</li>
-          <li>2. Pilih <span class="font-semibold text-gray-800">Tambahkan ke Layar Utama</span>.</li>
-          <li>3. Tap <span class="font-semibold text-gray-800">Tambah</span>.</li>
-        </ol>
-      </template>
-    </AppDialog>
   </div>
 </template>

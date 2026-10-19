@@ -25,6 +25,11 @@ export default defineEventHandler(async (event): Promise<Order> => {
     throw createError({ statusCode: 409, statusMessage: 'Pesanan sudah tidak bisa dibatalkan' })
   }
 
+  // Our own courier already holds it; there is no carrier to call off.
+  if (isAntarLangsung(order.courierCode) && order.status === 'DIJEMPUT') {
+    throw createError({ statusCode: 409, statusMessage: 'Paket sudah dijemput kurir kami, hubungi admin untuk membatalkan' })
+  }
+
   // An unpaid order exists only here, so cancelling it is ours alone — unless
   // an admin is approving it at this very moment, which is refused.
   if (order.status === 'MENUNGGU_PEMBAYARAN' && !order.biteshipOrderId) {

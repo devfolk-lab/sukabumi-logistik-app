@@ -4,6 +4,7 @@ import type { TourStep, TourWelcome } from '~/components/app/AppTour.vue'
 definePageMeta({ refreshKeys: ['profile', 'orders', 'stats'] })
 
 const { data: profile } = useProfile()
+const authUser = useAuthUser()
 const { data: orders, status: ordersStatus } = useOrders()
 
 const ordersLoading = computed(() => ordersStatus.value === 'pending' || ordersStatus.value === 'idle')
@@ -16,21 +17,32 @@ const activeOrders = computed(() => orders.value.filter(o =>
 // The home screen only teases the history; the riwayat page has the full list.
 const recentOrders = computed(() => orders.value.slice(0, 3))
 
-// Shown once to a new account: what each part of the home screen is for.
-const tourSteps: TourStep[] = [
+// Shown once to a new account, and again from "Panduan": what each part of
+// the home screen is for. Staff menus get a step only for whoever sees them.
+const tourSteps = computed<TourStep[]>(() => [
   { target: 'kirim', title: 'Kirim Paket', body: 'Mulai pengiriman di sini: pilih lokasi jemput dan tujuan, isi detail barang, lalu bandingkan tarif kurir.' },
   { target: 'lacak', title: 'Lacak Pengiriman', body: 'Untuk kiriman yang tidak dibuat di aplikasi ini: masukkan nomor resi Lion Parcel atau J&T Cargo dari mana saja untuk melihat posisi dan perjalanannya.' },
   { target: 'riwayat-menu', title: 'Riwayat', body: 'Semua pesanan yang kamu buat di aplikasi ini. Di sini kamu bisa bayar, melihat perjalanan paket, mencetak resi, atau mengirim lagi.' },
   { target: 'alamat', title: 'Alamat Tersimpan', body: 'Simpan alamat yang sering dipakai supaya tidak perlu mengetik ulang setiap kali mengirim.' },
+  ...(canApproveOrders(authUser.value?.role)
+    ? [{ target: 'admin-pesanan', title: 'Persetujuan Pesanan', body: 'Pesanan pelanggan yang menunggu pembayaran. Cocokkan transfer, QRIS, atau uang tunai di gerai, lalu setujui supaya pesanan dibuat di kurir.' }]
+    : []),
+  ...(canManageStaff(authUser.value?.role)
+    ? [{ target: 'admin-pengguna', title: 'Kelola Admin', body: 'Atur siapa saja yang menjadi admin: angkat akun yang sudah ada atau buat akun admin baru.' }]
+    : []),
   { target: 'aktif', title: 'Pengiriman Aktif', body: 'Pesananmu yang sedang dalam perjalanan tampil di sini. Ketuk salah satunya untuk melihat statusnya.' },
   { target: 'riwayat', title: 'Pesanan Terbaru', body: 'Tiga pesanan terakhirmu. Ketuk Lihat Semua untuk membuka seluruh riwayat.' }
-]
+])
 
 // Opens the tour, centred, before the first spotlight.
 const tourWelcome = computed<TourWelcome>(() => ({
   title: profile.value?.nama ? `Selamat datang, ${profile.value.nama.split(' ')[0]}!` : 'Selamat datang!',
-  body: 'Yuk kenalan dulu dengan Sukabumi Logistik. Tur singkat ini menunjukkan tempat untuk mengirim paket, melacak resi, dan melihat riwayat pesananmu.'
+  body: canApproveOrders(authUser.value?.role)
+    ? 'Yuk kenalan dulu dengan Sukabumi Logistik. Tur singkat ini menunjukkan tempat untuk mengirim paket, melacak resi, melihat riwayat, dan menu admin.'
+    : 'Yuk kenalan dulu dengan Sukabumi Logistik. Tur singkat ini menunjukkan tempat untuk mengirim paket, melacak resi, dan melihat riwayat pesananmu.'
 }))
+
+const tour = useTemplateRef('tour')
 
 const salam = computed(() => {
   const jam = new Date().getHours()
@@ -44,29 +56,46 @@ const salam = computed(() => {
 <template>
   <div>
     <AppPageHero>
-      <div>
-        <p class="text-sm font-medium text-white/70">
-          {{ salam }}
-        </p>
-        <h1 class="mt-0.5 flex items-center gap-1.5 text-2xl font-bold text-white">
-          <USkeleton
-            v-if="!profile"
-            class="h-7 w-40 rounded-lg bg-white/15"
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-white/70">
+            {{ salam }}
+          </p>
+          <h1 class="mt-0.5 flex items-center gap-1.5 text-2xl font-bold text-white">
+            <USkeleton
+              v-if="!profile"
+              class="h-7 w-40 rounded-lg bg-white/15"
+            />
+            <template v-else>
+              <span class="min-w-0 truncate">{{ profile.nama }}</span>
+              <span
+                class="shrink-0 text-xl"
+                aria-hidden="true"
+              >👋</span>
+            </template>
+          </h1>
+        </div>
+        <button
+          v-ripple
+          type="button"
+          class="flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20"
+          aria-label="Buka panduan aplikasi"
+          @click="tour?.start()"
+        >
+          <UIcon
+            name="i-lucide-circle-help"
+            class="pointer-events-none size-4.5"
           />
-          <template v-else>
-            {{ profile.nama }}
-            <span
-              class="text-xl"
-              aria-hidden="true"
-            >👋</span>
-          </template>
-        </h1>
+          <span class="pointer-events-none">Panduan</span>
+        </button>
       </div>
     </AppPageHero>
 
     <AppPageContent class="relative z-20 -mt-4">
       <HomeQuickActions />
     </AppPageContent>
+
+    <HomeInstallCard />
 
     <AppPageContent
       class="mt-6 mb-6"
@@ -187,6 +216,7 @@ const salam = computed(() => {
     </AppPageContent>
 
     <AppTour
+      ref="tour"
       name="home-v2"
       :steps="tourSteps"
       :welcome="tourWelcome"

@@ -4,6 +4,11 @@ export function formatRupiah(n: number): string {
   return `Rp ${n.toLocaleString('id-ID')}`
 }
 
+/** An order's price, or what stands in for it while an admin has yet to set one. */
+export function formatOngkir(n: number | null | undefined, pending = 'Menunggu harga'): string {
+  return typeof n === 'number' ? formatRupiah(n) : pending
+}
+
 export function normalizeResi(v: string): string {
   return String(v || '').trim().toUpperCase().replace(/^#/, '')
 }

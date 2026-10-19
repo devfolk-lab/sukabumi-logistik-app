@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Courier } from '~/types'
+import type { CourierFilter } from '~/components/mitra/MitraFilterTabs.vue'
 import { useBookingStore } from '~/stores/booking'
 
 const booking = useBookingStore()
@@ -9,7 +10,7 @@ if (!booking.hasRoute || booking.itemsProblem) {
   await navigateTo('/kirim', { replace: true })
 }
 
-const filter = ref<'all' | AllowedCourierCode>('all')
+const filter = ref<CourierFilter>('all')
 
 const request = useRequestFetch()
 
@@ -34,6 +35,13 @@ const { data: rates, status, error } = useAsyncData(
 
 const couriers = computed(() =>
   filter.value === 'all' ? rates.value : rates.value.filter(c => c.code === filter.value)
+)
+
+/** Our own courier needs no quote, so it shows even while rates load or fail. */
+const showAntarLangsung = computed(() => filter.value === 'all' || filter.value === ANTAR_LANGSUNG_CODE)
+const onlyAntarLangsung = computed(() => filter.value === ANTAR_LANGSUNG_CODE)
+const serviceCount = computed(() =>
+  couriers.value.filter(c => !c.unavailable).length + (showAntarLangsung.value ? 1 : 0)
 )
 
 function select(courier: Courier) {
@@ -77,13 +85,20 @@ onMounted(() => preloadRouteComponents('/kirim/detail'))
 
     <AppPageContent class="pb-3">
       <p class="text-sm text-gray-500">
-        <span class="font-bold text-gray-700">{{ couriers.length }}</span> layanan ditemukan
+        <span class="font-bold text-gray-700">{{ serviceCount }}</span> layanan ditemukan
       </p>
     </AppPageContent>
 
     <AppPageContent class="pb-40">
+      <MitraAntarLangsungCard
+        v-if="showAntarLangsung"
+        class="mb-3 lg:mb-5 lg:w-[calc(50%-0.625rem)]"
+        :selected="booking.selectedCourier?.id === ANTAR_LANGSUNG.id"
+        @select="select(ANTAR_LANGSUNG)"
+      />
+      <template v-if="onlyAntarLangsung" />
       <div
-        v-if="status === 'pending' || status === 'idle'"
+        v-else-if="status === 'pending' || status === 'idle'"
         class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-5"
       >
         <USkeleton

@@ -1,20 +1,29 @@
 <script setup lang="ts">
-/** In-page "not found" state, so a bad lookup never leaves the app shell. */
+/**
+ * In-page "not found" state, so a bad lookup never leaves the app shell.
+ * `offline` is for a lookup that failed only because there is no connection
+ * and no cached copy — nothing is missing, so it is drawn as a warning.
+ */
 defineProps<{
   title: string
   description: string
   backLabel: string
   backTo: string
   retry?: () => Promise<void> | void
+  offline?: boolean
 }>()
 </script>
 
 <template>
   <div class="rounded-3xl bg-white p-8 text-center shadow-card lg:shadow-card-flat">
-    <div class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-red-50">
+    <div
+      class="mx-auto flex size-16 items-center justify-center rounded-2xl"
+      :class="offline ? 'bg-amber-50' : 'bg-red-50'"
+    >
       <UIcon
-        name="i-lucide-search-x"
-        class="size-7 text-red-500"
+        :name="offline ? 'i-lucide-cloud-off' : 'i-lucide-search-x'"
+        class="size-7"
+        :class="offline ? 'text-amber-500' : 'text-red-500'"
       />
     </div>
     <p class="mt-4 text-lg font-bold text-gray-800">

@@ -1,4 +1,4 @@
-import type { CourierBrand, PartnerBadge } from '#shared/types'
+import type { Courier, CourierBrand, PartnerBadge } from '#shared/types'
 
 /**
  * Standard (non-instant) courier codes from Biteship's `/v1/couriers`. Instant
@@ -23,6 +23,41 @@ export type AllowedCourierCode = typeof ALLOWED_COURIERS[number]
 export function isAllowedCourier(code: string): code is AllowedCourierCode {
   return (ALLOWED_COURIERS as readonly string[]).includes(code.toLowerCase())
 }
+
+/**
+ * Our own courier, "Sukabumi Logistik Antar Langsung". It never goes through
+ * Biteship: there is no quote, the price is agreed on WhatsApp and set by an
+ * admin in the approval menu, and the admin moves the order along by hand.
+ */
+export const ANTAR_LANGSUNG_CODE = 'sukabumi'
+export const ANTAR_LANGSUNG_SERVICE = 'antar_langsung'
+
+export const ANTAR_LANGSUNG: Courier = {
+  id: `${ANTAR_LANGSUNG_CODE}:${ANTAR_LANGSUNG_SERVICE}`,
+  code: ANTAR_LANGSUNG_CODE,
+  name: 'Sukabumi Logistik',
+  service: 'Antar Langsung',
+  serviceCode: ANTAR_LANGSUNG_SERVICE,
+  description: 'Diantar langsung oleh tim kami',
+  cost: null,
+  etd: '',
+  brand: {
+    from: '#002144',
+    to: '#004080',
+    initials: 'SL',
+    logo: '/img/couriers/sukabumi-logistik-mark.png'
+  }
+}
+
+export function isAntarLangsung(code: string | null | undefined): boolean {
+  return code?.toLowerCase() === ANTAR_LANGSUNG_CODE
+}
+
+/**
+ * J&T Cargo only takes heavy parcels. Below this total weight its card shows
+ * disabled with no price, and an order for it is refused.
+ */
+export const JNT_CARGO_MIN_GRAM = 11_000
 
 interface CourierMeta {
   label: string
@@ -52,7 +87,8 @@ const COURIER_META: Record<string, CourierMeta> = {
   sentralcargo: { label: 'Sentral Cargo', brand: { from: '#0A5C36', to: '#074428', initials: 'SCP' } },
   wahana: { label: 'Wahana', brand: { from: '#1C3F94', to: '#152f70', initials: 'WHN', logo: '/img/couriers/wahana.png' } },
   jntcargo: { label: 'J&T Cargo', brand: { from: '#008638', to: '#008638', initials: 'J&T', logo: '/img/couriers/jnt-cargo.png', logoOnBrand: true } },
-  paxel: { label: 'Paxel', brand: { from: '#6C2DC7', to: '#5323a0', initials: 'PXL' } }
+  paxel: { label: 'Paxel', brand: { from: '#6C2DC7', to: '#5323a0', initials: 'PXL' } },
+  [ANTAR_LANGSUNG_CODE]: { label: 'Sukabumi Logistik', brand: ANTAR_LANGSUNG.brand }
 }
 
 const FALLBACK_BRAND: CourierBrand = { from: '#64748b', to: '#475569' }

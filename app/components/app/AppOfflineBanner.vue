@@ -32,7 +32,7 @@ const updatedAt = computed(() => {
   >
     <div
       v-if="!online"
-      class="sticky top-0 z-40 flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-center text-xs font-semibold text-white"
+      class="sticky top-0 z-40 flex items-center justify-center gap-2 bg-amber-500 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 text-center text-xs font-semibold text-white"
     >
       <UIcon
         name="i-lucide-cloud-off"

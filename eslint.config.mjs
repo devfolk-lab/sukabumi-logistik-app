@@ -2,5 +2,6 @@
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
-  // Your custom configs here
+  // Prisma's generated client: rewritten by `prisma generate`, never by hand.
+  { ignores: ['server/generated/**'] }
 )

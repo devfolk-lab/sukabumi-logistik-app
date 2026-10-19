@@ -22,9 +22,26 @@ const body = z.object({
   items: itemsSchema
 })
 
-export default defineEventHandler(async (event): Promise<Order> => {
-  const profile = await requireProfile(event)
-  const input = await readValidatedBody(event, body.parse)
+/** The courier columns and price of the order, from a fresh Biteship quote or our own courier. */
+async function quote(input: z.infer<typeof body>) {
+  // Our own courier has no quote: an admin sets the price agreed on WhatsApp.
+  if (input.courierId === ANTAR_LANGSUNG.id) {
+    return {
+      courierCode: ANTAR_LANGSUNG.code,
+      courierName: ANTAR_LANGSUNG.name,
+      serviceCode: ANTAR_LANGSUNG.serviceCode,
+      serviceName: ANTAR_LANGSUNG.service,
+      etd: null,
+      price: null
+    }
+  }
+
+  if (input.courierId.startsWith('jntcargo:') && itemsWeight(input.items) < JNT_CARGO_MIN_GRAM) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: `J&T Cargo hanya tersedia untuk paket ${JNT_CARGO_MIN_GRAM / 1000} kg ke atas`
+    })
+  }
 
   // Re-price server-side: the client must not be able to name its own ongkir.
   const rates = await getRates({
@@ -45,6 +62,23 @@ export default defineEventHandler(async (event): Promise<Order> => {
     })
   }
 
+  // Biteship's own values, stored verbatim so the record matches the quote
+  // and the handoff can book exactly this service.
+  return {
+    courierCode: rate.courier_code,
+    courierName: courierLabel(rate.courier_code, rate.courier_name),
+    serviceCode: rate.courier_service_code,
+    serviceName: rate.courier_service_name,
+    etd: rate.duration || null,
+    price: rate.price
+  }
+}
+
+export default defineEventHandler(async (event): Promise<Order> => {
+  const profile = await requireProfile(event)
+  const input = await readValidatedBody(event, body.parse)
+  const { price, ...courier } = await quote(input)
+
   const created = await prisma.order.create({
     data: {
       profileId: profile.id,
@@ -57,16 +91,10 @@ export default defineEventHandler(async (event): Promise<Order> => {
       receiverAlamat: input.receiver.alamat,
       originArea: input.origin,
       destinationArea: input.destination,
-      // Biteship's own values, stored verbatim so the record matches the quote
-      // and the handoff can book exactly this service.
-      courierCode: rate.courier_code,
-      courierName: courierLabel(rate.courier_code, rate.courier_name),
-      serviceCode: rate.courier_service_code,
-      serviceName: rate.courier_service_name,
-      etd: rate.duration || null,
+      ...courier,
       weightGram: itemsWeight(input.items),
-      shippingCost: rate.price,
-      total: rate.price,
+      shippingCost: price,
+      total: price,
       items: {
         create: input.items.map((item, position) => ({
           position,
@@ -87,7 +115,8 @@ export default defineEventHandler(async (event): Promise<Order> => {
   })
 
   // Nothing goes to Biteship yet: the order waits here, unpaid, until an admin
-  // has checked the transfer and approves it, which books it on Biteship.
+  // has checked the transfer and approves it, which books it on Biteship (or,
+  // for Antar Langsung, hands it to our own couriers).
   setResponseStatus(event, 201)
   return toDomainOrder(created)
 })

@@ -6,7 +6,7 @@ import type { ModalProps, DrawerProps } from '@nuxt/ui'
  * `lg`, the same one that swaps the bottom nav for the sidebar, so every
  * dialog follows the shell it is opened from.
  */
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   title?: string
   description?: string
   /**
@@ -25,6 +25,19 @@ const open = defineModel<boolean>('open', { default: false })
 
 // The app is client-rendered, so the query resolves before first paint.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
+
+// Nuxt UI gives the overlay and the sheet no z-index, so the z-50 sticky bar
+// and bottom nav would stay on top of an open dialog.
+const modalUi = computed(() => ({
+  ...props.ui,
+  overlay: ['z-60', props.ui?.overlay].filter(Boolean).join(' '),
+  content: ['z-60', props.ui?.content].filter(Boolean).join(' ')
+}))
+const drawerUi = computed(() => ({
+  ...props.ui,
+  overlay: ['z-60', props.ui?.overlay].filter(Boolean).join(' '),
+  content: 'z-60 mx-auto rounded-t-3xl md:max-lg:max-w-105'
+}))
 </script>
 
 <template>
@@ -33,7 +46,7 @@ const isDesktop = useMediaQuery('(min-width: 1024px)')
     v-model:open="open"
     :title="title"
     :description="description"
-    :ui="ui"
+    :ui="modalUi"
   >
     <template
       v-if="$slots.body"
@@ -54,7 +67,7 @@ const isDesktop = useMediaQuery('(min-width: 1024px)')
     v-model:open="open"
     :title="title"
     :description="description"
-    :ui="{ ...ui, content: 'mx-auto rounded-t-3xl md:max-lg:max-w-105' }"
+    :ui="drawerUi"
   >
     <template
       v-if="$slots.body"

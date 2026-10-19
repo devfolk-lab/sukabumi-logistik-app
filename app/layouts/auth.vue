@@ -13,8 +13,12 @@
         </p>
       </div>
     </div>
-    <div class="flex flex-1 items-center justify-center px-6 py-8 lg:p-12">
+    <div class="flex flex-1 items-center justify-center px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] lg:p-12">
       <div class="animate-page-in w-full max-w-md">
+        <!-- On a phone the brand panel is hidden, so the logo heads the form. -->
+        <div class="mb-8 flex justify-center lg:hidden">
+          <AppLogo class="h-16 max-w-full" />
+        </div>
         <slot />
       </div>
     </div>

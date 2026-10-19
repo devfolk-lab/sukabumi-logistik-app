@@ -193,9 +193,12 @@ export async function clearOfflineStores(): Promise<void> {
   if (!import.meta.client) return
   await Promise.all([idbClear(CACHE_STORE), idbClear(OUTBOX_STORE)])
 
+  // The service worker's account-scoped caches (nuxt.config.ts
+  // `runtimeCaching`). `suklog-icons` holds no account data and stays.
   if (typeof caches === 'undefined') return
   await Promise.all([
     caches.delete('suklog-tracking'),
+    caches.delete('suklog-orders'),
     caches.delete('suklog-destinations')
   ])
 }
@@ -228,8 +231,17 @@ export function prefetchApiData(): void {
   }
 }
 
-/** Turns an H3 error from `$fetch` into the message the API meant to show. */
+/**
+ * Turns an H3 error from `$fetch` into the message the API meant to show. A
+ * request that never reached the server while the device is offline says so,
+ * rather than a generic "coba lagi" that suggests the server refused it.
+ */
 export function apiMessage(error: unknown, fallback: string): string {
   const data = (error as { data?: { message?: string, statusMessage?: string } })?.data
-  return data?.statusMessage || data?.message || fallback
+  const message = data?.statusMessage || data?.message
+  if (message) return message
+  if (import.meta.client && !navigator.onLine) return OFFLINE_MESSAGE
+  return fallback
 }
+
+export const OFFLINE_MESSAGE = 'Tidak ada koneksi internet. Sambungkan perangkat lalu coba lagi.'

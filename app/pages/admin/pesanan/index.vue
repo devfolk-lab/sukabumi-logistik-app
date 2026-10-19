@@ -95,7 +95,7 @@ function settled(order: AdminOrder) {
             Persetujuan Pesanan
           </h1>
           <p class="text-sm text-white/60">
-            Cocokkan transfer, lalu setujui untuk membuat pesanan di Biteship
+            Cocokkan pembayaran, lalu setujui untuk membuat pesanan di Biteship
           </p>
         </div>
       </div>

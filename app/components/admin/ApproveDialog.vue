@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { AdminOrder } from '~/types'
+import type { PaymentMethod } from '#shared/utils/payment'
 
 /**
- * Approves a paid order: the admin has seen the transfer, and this books the
- * shipment on Biteship. Coordinates are optional — some carriers (Lion Parcel
+ * Approves a paid order: the admin has seen the transfer or QRIS payment, or
+ * taken the cash at the counter, and this books the shipment on Biteship and
+ * records how it was paid. Coordinates are optional — some carriers (Lion Parcel
  * among them) place the pickup by them and may refuse an order without.
  */
 const props = defineProps<{ order: AdminOrder | null }>()
@@ -12,16 +14,21 @@ const emit = defineEmits<{ approved: [order: AdminOrder] }>()
 
 const toast = useToast()
 const pending = ref(false)
+const paymentMethod = ref<PaymentMethod>('TRANSFER')
 const showCoordinates = ref(false)
 const origin = ref('')
 const destination = ref('')
 
 watch(open, (now) => {
   if (!now) return
+  paymentMethod.value = 'TRANSFER'
   showCoordinates.value = false
   origin.value = ''
   destination.value = ''
 })
+
+/** Our own courier: no Biteship booking, so no coordinates either. */
+const antarLangsung = computed(() => isAntarLangsung(props.order?.courierCode))
 
 const originPoint = computed(() => parseCoordinate(origin.value))
 const destinationPoint = computed(() => parseCoordinate(destination.value))
@@ -34,6 +41,7 @@ async function approve() {
     const approved = await $fetch<AdminOrder>(`/api/admin/orders/${props.order.id}/approve`, {
       method: 'POST',
       body: {
+        paymentMethod: paymentMethod.value,
         ...(originPoint.value ? { originCoordinate: originPoint.value } : {}),
         ...(destinationPoint.value ? { destinationCoordinate: destinationPoint.value } : {})
       }
@@ -41,7 +49,9 @@ async function approve() {
     open.value = false
     toast.add({
       title: 'Pesanan disetujui',
-      description: approved.awb ? `Resi ${approved.awb} terbit.` : 'Pesanan sudah dibuat di Biteship.',
+      description: isAntarLangsung(approved.courierCode)
+        ? 'Diserahkan ke kurir Antar Langsung. Perbarui statusnya di halaman pesanan.'
+        : approved.awb ? `Resi ${approved.awb} terbit.` : 'Pesanan sudah dibuat di Biteship.',
       color: 'success',
       icon: 'i-lucide-circle-check'
     })
@@ -59,7 +69,9 @@ async function approve() {
   <AppDialog
     v-model:open="open"
     title="Setujui pesanan?"
-    description="Pastikan transfer sudah masuk. Pesanan akan dibuat di Biteship dan kurir dijadwalkan."
+    :description="antarLangsung
+      ? 'Pastikan pembayaran sudah diterima. Pesanan diserahkan ke kurir Antar Langsung kita, tanpa Biteship.'
+      : 'Pastikan pembayaran sudah diterima. Pesanan akan dibuat di Biteship dan kurir dijadwalkan.'"
     :ui="{ content: 'sm:max-w-lg' }"
   >
     <template #body>
@@ -70,10 +82,10 @@ async function approve() {
         <div class="flex items-center justify-between gap-3 rounded-2xl bg-primary-50 p-4">
           <div class="min-w-0">
             <p class="text-xs font-bold uppercase tracking-wider text-primary/60">
-              Cocokkan dengan transfer
+              Cocokkan dengan pembayaran
             </p>
             <p class="mt-0.5 text-2xl font-extrabold text-primary">
-              {{ formatRupiah(order.price) }}
+              {{ formatOngkir(order.price) }}
             </p>
           </div>
           <div class="min-w-0 text-right">
@@ -83,6 +95,37 @@ async function approve() {
             <p class="truncate text-sm text-gray-500">
               {{ order.customer.nama }}
             </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="mb-2 text-sm font-semibold text-gray-600">
+            Dibayar lewat
+          </p>
+          <div
+            role="radiogroup"
+            aria-label="Metode pembayaran"
+            class="grid grid-cols-3 gap-2"
+          >
+            <button
+              v-for="item in PAYMENT_METHODS"
+              :key="item"
+              v-ripple.dark
+              type="button"
+              role="radio"
+              :aria-checked="paymentMethod === item"
+              class="flex min-w-0 flex-col items-center gap-1 rounded-xl border-2 px-2 py-2.5 text-xs font-semibold"
+              :class="paymentMethod === item
+                ? 'border-primary bg-primary-50 text-primary'
+                : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+              @click="paymentMethod = item"
+            >
+              <UIcon
+                :name="PAYMENT_METHOD_META[item].icon"
+                class="pointer-events-none size-5"
+              />
+              <span class="pointer-events-none truncate">{{ PAYMENT_METHOD_META[item].label }}</span>
+            </button>
           </div>
         </div>
 
@@ -113,7 +156,7 @@ async function approve() {
           </div>
         </dl>
 
-        <div>
+        <div v-if="!antarLangsung">
           <button
             v-ripple.dark
             type="button"
@@ -189,7 +232,7 @@ async function approve() {
           class="flex-1 font-bold"
           icon="i-lucide-check"
           :loading="pending"
-          :disabled="invalid"
+          :disabled="invalid || order?.price === null"
           @click="approve"
         >
           Setujui

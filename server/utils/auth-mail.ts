@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import type { ZodType } from 'zod'
 import { TOKEN_LIFETIME_TEXT } from './auth-tokens'
+import { MAIL_BRAND, mailLayout } from './mail'
 import { rateLimit, resetRateLimit } from './rate-limit'
 
 /**
@@ -41,36 +42,8 @@ export function releaseAuthEmail(kind: 'confirm' | 'reset', email: string): void
   resetRateLimit(`email:${kind}:${email}`)
 }
 
-const BRAND = 'Sukabumi Logistik'
-
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-/** A single-button email laid out with tables, which every mail client renders. */
-function layout(options: { heading: string, intro: string, button: string, link: string, outro: string }): string {
-  const link = escapeHtml(options.link)
-  return `<!doctype html>
-<html lang="id"><body style="margin:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;color:#16202c">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 12px">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden">
-<tr><td style="background:#002144;padding:20px 24px;color:#ffffff;font-size:18px;font-weight:bold">${BRAND}</td></tr>
-<tr><td style="padding:28px 24px 8px">
-<h1 style="margin:0 0 12px;font-size:20px;color:#002144">${escapeHtml(options.heading)}</h1>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.6">${escapeHtml(options.intro)}</p>
-<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:12px;background:#002144">
-<a href="${link}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:15px;font-weight:bold;text-decoration:none">${escapeHtml(options.button)}</a>
-</td></tr></table>
-<p style="margin:24px 0 8px;font-size:13px;line-height:1.6;color:#5b6675">Jika tombol tidak berfungsi, salin tautan ini ke browser:</p>
-<p style="margin:0 0 24px;font-size:12px;line-height:1.5;word-break:break-all"><a href="${link}" style="color:#1d6fb8">${link}</a></p>
-<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#5b6675">${escapeHtml(options.outro)}</p>
-</td></tr>
-<tr><td style="padding:16px 24px;border-top:1px solid #e5e9ef;font-size:12px;color:#8a94a3">Email ini dikirim otomatis oleh ${BRAND}. Mohon tidak membalas email ini.</td></tr>
-</table>
-</td></tr></table>
-</body></html>`
-}
+const BRAND = MAIL_BRAND
+const layout = mailLayout
 
 export async function sendConfirmationEmail(to: string, nama: string, link: string): Promise<void> {
   const { sendMail } = useNodeMailer()

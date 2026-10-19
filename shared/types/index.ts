@@ -23,10 +23,16 @@ export interface Courier {
   /** Biteship's `courier_service_code`, e.g. "reg_pack" — what an order is booked with. */
   serviceCode: string
   description: string
-  cost: number
+  /**
+   * Null when there is no quote to show: our own Antar Langsung courier, whose
+   * price an admin sets later, or a carrier that cannot take this package.
+   */
+  cost: number | null
   /** Biteship's `duration` verbatim (e.g. "2 - 3 days", or "" when not provided). */
   etd: string
   brand: CourierBrand
+  /** Why this carrier cannot take the package; the card shows it disabled. */
+  unavailable?: string
 }
 
 export interface PartnerBadge {
@@ -114,7 +120,8 @@ export interface Order {
   courierCode: string
   /** Biteship's `courier_service_name`, e.g. "Reg Pack". */
   service: string
-  price: number
+  /** Null for an Antar Langsung order until an admin has set its price. */
+  price: number | null
   weight: string
   weightGram: number
   /** Item names, for one-line summaries. */
@@ -241,6 +248,8 @@ export interface AdminOrder extends Order {
   /** When an admin approved it and who, or null while it waits. */
   approvedAt: string | null
   approvedBy: string | null
+  /** How it was paid ("Transfer Bank", "QRIS", "Tunai di Gerai"), or null while unpaid. */
+  paymentMethod: string | null
   /** Biteship's own status for the booked order, lowercase. */
   biteshipStatus: string | null
 }
@@ -262,4 +271,43 @@ export interface OrderStats {
   proses: number
   selesai: number
   batal: number
+}
+
+/** One event in `PublicTracking.history`. */
+export interface PublicTrackingEvent {
+  /** Biteship status code (`picked`, `delivered`…), lowercase; null when unknown. */
+  status: string | null
+  /** Indonesian title for the status. */
+  title: string
+  /** The carrier's own note, when it says more than the title. */
+  note: string | null
+  location: string | null
+  /** ISO timestamp. */
+  time: string
+}
+
+/**
+ * A shipment as the public tracking API (`/api/trackings/:waybill/couriers/:courier`)
+ * reports it to the landing page. Nobody is signed in there, so it carries no
+ * street address, contact or price — only the route, a masked receiver name and
+ * the history, oldest first.
+ */
+export interface PublicTracking {
+  waybill: string
+  courier: { code: string, name: string, service: string | null }
+  stage: OrderStage
+  /** Biteship's latest status code, lowercase, or null when unknown. */
+  statusCode: string | null
+  /** Indonesian headline for where it stands. */
+  status: string
+  /** "Ah*** R." */
+  receiver: string | null
+  /** "Sukabumi, Cibadak" for our orders; the carrier's own text otherwise. */
+  origin: string | null
+  destination: string | null
+  weight: string | null
+  eta: string | null
+  /** The carrier's own tracking page, when Biteship gives one. */
+  link: string | null
+  history: PublicTrackingEvent[]
 }

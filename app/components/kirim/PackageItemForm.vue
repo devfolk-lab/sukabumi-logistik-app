@@ -35,8 +35,8 @@ function digitsOf(value: unknown): number | null {
   return digits ? Number(digits) : null
 }
 
-function setRequired(key: 'value' | 'quantity', value: unknown): void {
-  set(key, digitsOf(value) ?? 0)
+function setQuantity(value: unknown): void {
+  set('quantity', digitsOf(value) ?? 0)
 }
 
 // Berat is entered in kilograms to one decimal (0,5 kg = 500 g) but stored in
@@ -110,19 +110,13 @@ const numberInput = 'tabular-nums [appearance:textfield] [&::-webkit-inner-spin-
         required
         class="col-span-2 sm:col-span-1"
       >
-        <UInput
-          :model-value="modelValue.value ? modelValue.value.toLocaleString('id-ID') : ''"
-          inputmode="numeric"
+        <AppRupiahInput
+          :model-value="modelValue.value || undefined"
           placeholder="0"
           size="xl"
           class="w-full"
-          :ui="{ base: numberInput }"
-          @update:model-value="setRequired('value', $event)"
-        >
-          <template #leading>
-            <span class="text-sm font-bold text-gray-400">Rp</span>
-          </template>
-        </UInput>
+          @update:model-value="set('value', $event ?? 0)"
+        />
       </UFormField>
 
       <UFormField
@@ -136,7 +130,7 @@ const numberInput = 'tabular-nums [appearance:textfield] [&::-webkit-inner-spin-
           size="xl"
           class="w-full"
           :ui="{ base: numberInput }"
-          @update:model-value="setRequired('quantity', $event)"
+          @update:model-value="setQuantity"
         >
           <template #trailing>
             <span class="text-sm font-bold text-gray-400">pcs</span>

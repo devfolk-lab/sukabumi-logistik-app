@@ -4,7 +4,7 @@ withDefaults(defineProps<{ sticky?: boolean }>(), { sticky: false })
 
 <template>
   <div
-    class="relative overflow-hidden bg-linear-135 from-[#002144] via-[#003366] to-[#004080] px-6 pt-14 pb-10 lg:rounded-none lg:px-12 lg:pt-10 lg:pb-8"
+    class="relative overflow-hidden bg-linear-135 from-[#002144] via-[#003366] to-[#004080] px-6 pt-[max(3.5rem,calc(env(safe-area-inset-top)+1rem))] pb-10 lg:rounded-none lg:px-12 lg:pt-10 lg:pb-8"
     :class="[
       sticky ? 'sticky top-0 z-30 lg:static' : '',
       'rounded-b-[2rem]'

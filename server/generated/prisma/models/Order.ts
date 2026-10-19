@@ -370,8 +370,8 @@ export type OrderGroupByOutputType = {
   serviceName: string
   etd: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost: number | null
+  total: number | null
   paymentMethod: string | null
   paidAt: Date | null
   approvedAt: Date | null
@@ -429,8 +429,8 @@ export type OrderWhereInput = {
   serviceName?: Prisma.StringFilter<"Order"> | string
   etd?: Prisma.StringNullableFilter<"Order"> | string | null
   weightGram?: Prisma.IntFilter<"Order"> | number
-  shippingCost?: Prisma.IntFilter<"Order"> | number
-  total?: Prisma.IntFilter<"Order"> | number
+  shippingCost?: Prisma.IntNullableFilter<"Order"> | number | null
+  total?: Prisma.IntNullableFilter<"Order"> | number | null
   paymentMethod?: Prisma.StringNullableFilter<"Order"> | string | null
   paidAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -469,8 +469,8 @@ export type OrderOrderByWithRelationInput = {
   serviceName?: Prisma.SortOrder
   etd?: Prisma.SortOrderInput | Prisma.SortOrder
   weightGram?: Prisma.SortOrder
-  shippingCost?: Prisma.SortOrder
-  total?: Prisma.SortOrder
+  shippingCost?: Prisma.SortOrderInput | Prisma.SortOrder
+  total?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   paidAt?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -513,8 +513,8 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   serviceName?: Prisma.StringFilter<"Order"> | string
   etd?: Prisma.StringNullableFilter<"Order"> | string | null
   weightGram?: Prisma.IntFilter<"Order"> | number
-  shippingCost?: Prisma.IntFilter<"Order"> | number
-  total?: Prisma.IntFilter<"Order"> | number
+  shippingCost?: Prisma.IntNullableFilter<"Order"> | number | null
+  total?: Prisma.IntNullableFilter<"Order"> | number | null
   paymentMethod?: Prisma.StringNullableFilter<"Order"> | string | null
   paidAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -552,8 +552,8 @@ export type OrderOrderByWithAggregationInput = {
   serviceName?: Prisma.SortOrder
   etd?: Prisma.SortOrderInput | Prisma.SortOrder
   weightGram?: Prisma.SortOrder
-  shippingCost?: Prisma.SortOrder
-  total?: Prisma.SortOrder
+  shippingCost?: Prisma.SortOrderInput | Prisma.SortOrder
+  total?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   paidAt?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -596,8 +596,8 @@ export type OrderScalarWhereWithAggregatesInput = {
   serviceName?: Prisma.StringWithAggregatesFilter<"Order"> | string
   etd?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   weightGram?: Prisma.IntWithAggregatesFilter<"Order"> | number
-  shippingCost?: Prisma.IntWithAggregatesFilter<"Order"> | number
-  total?: Prisma.IntWithAggregatesFilter<"Order"> | number
+  shippingCost?: Prisma.IntNullableWithAggregatesFilter<"Order"> | number | null
+  total?: Prisma.IntNullableWithAggregatesFilter<"Order"> | number | null
   paymentMethod?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   paidAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
   approvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
@@ -631,8 +631,8 @@ export type OrderCreateInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -670,8 +670,8 @@ export type OrderUncheckedCreateInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -707,8 +707,8 @@ export type OrderUpdateInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -746,8 +746,8 @@ export type OrderUncheckedUpdateInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -784,8 +784,8 @@ export type OrderCreateManyInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -819,8 +819,8 @@ export type OrderUpdateManyMutationInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -854,8 +854,8 @@ export type OrderUncheckedUpdateManyInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1154,8 +1154,8 @@ export type OrderCreateWithoutApprovedByInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1192,8 +1192,8 @@ export type OrderUncheckedCreateWithoutApprovedByInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1258,8 +1258,8 @@ export type OrderScalarWhereInput = {
   serviceName?: Prisma.StringFilter<"Order"> | string
   etd?: Prisma.StringNullableFilter<"Order"> | string | null
   weightGram?: Prisma.IntFilter<"Order"> | number
-  shippingCost?: Prisma.IntFilter<"Order"> | number
-  total?: Prisma.IntFilter<"Order"> | number
+  shippingCost?: Prisma.IntNullableFilter<"Order"> | number | null
+  total?: Prisma.IntNullableFilter<"Order"> | number | null
   paymentMethod?: Prisma.StringNullableFilter<"Order"> | string | null
   paidAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   approvedAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -1293,8 +1293,8 @@ export type OrderCreateWithoutProfileInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1330,8 +1330,8 @@ export type OrderUncheckedCreateWithoutProfileInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1393,8 +1393,8 @@ export type OrderCreateWithoutItemsInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1431,8 +1431,8 @@ export type OrderUncheckedCreateWithoutItemsInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1483,8 +1483,8 @@ export type OrderUpdateWithoutItemsInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1521,8 +1521,8 @@ export type OrderUncheckedUpdateWithoutItemsInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1557,8 +1557,8 @@ export type OrderCreateWithoutTrackingEventsInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1595,8 +1595,8 @@ export type OrderUncheckedCreateWithoutTrackingEventsInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1647,8 +1647,8 @@ export type OrderUpdateWithoutTrackingEventsInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1685,8 +1685,8 @@ export type OrderUncheckedUpdateWithoutTrackingEventsInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1722,8 +1722,8 @@ export type OrderCreateManyApprovedByInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1756,8 +1756,8 @@ export type OrderUpdateWithoutApprovedByInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1794,8 +1794,8 @@ export type OrderUncheckedUpdateWithoutApprovedByInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1831,8 +1831,8 @@ export type OrderUncheckedUpdateManyWithoutApprovedByInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1865,8 +1865,8 @@ export type OrderCreateManyProfileInput = {
   serviceName: string
   etd?: string | null
   weightGram: number
-  shippingCost: number
-  total: number
+  shippingCost?: number | null
+  total?: number | null
   paymentMethod?: string | null
   paidAt?: Date | string | null
   approvedAt?: Date | string | null
@@ -1900,8 +1900,8 @@ export type OrderUpdateWithoutProfileInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1937,8 +1937,8 @@ export type OrderUncheckedUpdateWithoutProfileInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1974,8 +1974,8 @@ export type OrderUncheckedUpdateManyWithoutProfileInput = {
   serviceName?: Prisma.StringFieldUpdateOperationsInput | string
   etd?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   weightGram?: Prisma.IntFieldUpdateOperationsInput | number
-  shippingCost?: Prisma.IntFieldUpdateOperationsInput | number
-  total?: Prisma.IntFieldUpdateOperationsInput | number
+  shippingCost?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  total?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   paymentMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2228,8 +2228,8 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     serviceName: string
     etd: string | null
     weightGram: number
-    shippingCost: number
-    total: number
+    shippingCost: number | null
+    total: number | null
     paymentMethod: string | null
     paidAt: Date | null
     approvedAt: Date | null

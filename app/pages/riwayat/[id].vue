@@ -36,6 +36,13 @@ const routePoints = computed(() => order.value
   : [])
 
 const belumBayar = computed(() => order.value?.stage === 'MENUNGGU_PEMBAYARAN')
+/** Our own courier: no Biteship booking, the price comes from an admin. */
+const antarLangsung = computed(() => isAntarLangsung(order.value?.courierCode))
+/** An Antar Langsung order whose ongkir is still being agreed on WhatsApp. */
+const menungguHarga = computed(() => belumBayar.value && order.value?.price === null)
+
+const whatsapp = useWhatsappChat()
+const hargaChatUrl = computed(() => order.value ? whatsapp.url(antarLangsungPriceMessage(order.value)) : undefined)
 
 /** Why the tracking card has no carrier history to show. */
 const alasanTanpaRiwayat = computed(() => {
@@ -52,7 +59,7 @@ const alasanTidakCetak = computed(() => {
   if (!order.value) return ''
   if (order.value.stage === 'BATAL') return 'Pesanan dibatalkan, resi tidak bisa dicetak.'
   if (order.value.stage === 'MENUNGGU_PEMBAYARAN') return 'Resi bisa dicetak setelah pembayaran dikonfirmasi.'
-  if (!order.value.awb) return 'Menunggu nomor resi dari kurir.'
+  if (!order.value.awb && !antarLangsung.value) return 'Menunggu nomor resi dari kurir.'
   return ''
 })
 const bisaCetak = computed(() => Boolean(order.value) && !alasanTidakCetak.value)
@@ -93,8 +100,10 @@ async function kirimLagi() {
   booking.repeatOrder(order.value)
   await navigateTo('/kirim')
 }
+// Our own courier cannot be called off once it holds the package.
 const bisaDibatalkan = computed(() =>
-  order.value?.stage === 'MENUNGGU_PEMBAYARAN' || order.value?.stage === 'DIPROSES' || order.value?.stage === 'DIJEMPUT'
+  order.value?.stage === 'MENUNGGU_PEMBAYARAN' || order.value?.stage === 'DIPROSES'
+  || (order.value?.stage === 'DIJEMPUT' && !antarLangsung.value)
 )
 
 /** Paid and approved: only then is the order worth repeating. */
@@ -127,10 +136,22 @@ function requireConnection(): boolean {
 
 const showPayment = ref(false)
 
-/** Opens the payment steps: transfer, then confirm on WhatsApp. */
+/** Opens the payment steps: transfer, QRIS or cash at the outlet. */
 function openPayment() {
-  if (order.value) showPayment.value = true
+  if (order.value && !menungguHarga.value) showPayment.value = true
 }
+
+// The admin sets the Antar Langsung price after the WhatsApp chat; the
+// 20-second refresh below brings it in.
+watch(() => order.value?.price, (now, before) => {
+  if (before !== null || typeof now !== 'number' || !belumBayar.value) return
+  toast.add({
+    title: 'Ongkir sudah ditetapkan',
+    description: `${formatRupiah(now)}. Ketuk Bayar untuk melanjutkan.`,
+    color: 'success',
+    icon: 'i-lucide-badge-check'
+  })
+})
 
 // An admin approves the transfer from the admin menu, so an unpaid order keeps
 // asking while it is on screen and moves on as soon as it has been approved.
@@ -140,6 +161,11 @@ useIntervalFn(() => {
     void refresh()
   }
 }, 20_000)
+
+// Opened offline with nothing cached: load it as soon as the connection is back.
+watch(online, (isOnline) => {
+  if (isOnline && error.value) void refresh()
+})
 
 watch(() => order.value?.stage, (now, before) => {
   if (before !== 'MENUNGGU_PEMBAYARAN' || !now || now === before) return
@@ -163,7 +189,7 @@ const showCancel = ref(false)
 
 /** What cancelling does at this stage, for the confirmation. */
 const keteranganBatal = computed(() => belumBayar.value
-  ? 'Pesanan belum dibayar dan akan dihapus dari antrean. Jangan transfer untuk pesanan ini.'
+  ? 'Pesanan belum dibayar dan akan dihapus dari antrean. Jangan bayar untuk pesanan ini.'
   : 'Penjemputan oleh kurir akan dibatalkan. Hubungi Pusat Bantuan untuk pengembalian dana.')
 
 /** Asks first; the API is only called from the confirmation. */
@@ -232,6 +258,15 @@ async function cancel() {
       class="mt-5 pb-10"
     >
       <AppNotFound
+        v-if="!online"
+        offline
+        title="Belum tersedia offline"
+        description="Pesanan ini belum pernah dibuka di perangkat ini. Halaman akan dimuat otomatis begitu kembali online."
+        back-label="Kembali ke Riwayat"
+        back-to="/riwayat"
+      />
+      <AppNotFound
+        v-else
         title="Pesanan tidak ditemukan"
         :description="apiMessage(error, 'Pesanan ini mungkin sudah dihapus atau bukan milik akunmu.')"
         back-label="Kembali ke Riwayat"
@@ -272,9 +307,44 @@ async function cancel() {
         </div>
       </div>
 
-      <!-- Payment: waiting for the transfer to be verified, or confirmed -->
+      <!-- Payment: Antar Langsung waiting for its price, waiting for the
+           payment to be verified, or confirmed -->
       <div
-        v-if="belumBayar"
+        v-if="menungguHarga"
+        class="antar-glow relative overflow-hidden rounded-3xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] p-5 text-white shadow-lg shadow-primary/20"
+      >
+        <div class="absolute -top-10 -right-8 size-32 rounded-full bg-secondary/20 blur-2xl" />
+        <div class="relative flex items-start gap-3">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+            <UIcon
+              name="i-lucide-message-circle-more"
+              class="size-5"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-bold">
+              Menunggu ongkir dari admin
+            </p>
+            <p class="mt-0.5 text-sm text-white/75">
+              Tarif layanan kurir saat ini baru bisa dikonfirmasi via WhatsApp. Klik tombol di bawah ini untuk chat Admin.
+            </p>
+            <UButton
+              v-if="hargaChatUrl"
+              v-ripple
+              :to="hargaChatUrl"
+              target="_blank"
+              rel="noopener"
+              icon="i-simple-icons-whatsapp"
+              size="lg"
+              class="mt-3 bg-[#25D366] font-bold text-white hover:bg-[#1ebe5b]"
+            >
+              Konfirmasi via WhatsApp
+            </UButton>
+          </div>
+        </div>
+      </div>
+      <div
+        v-else-if="belumBayar"
         class="rounded-3xl border border-amber-100 bg-amber-50 p-5"
       >
         <div class="flex items-start gap-3">
@@ -289,7 +359,7 @@ async function cancel() {
               Menunggu pembayaran
             </p>
             <p class="mt-0.5 text-sm text-amber-700">
-              Transfer {{ formatRupiah(order.price) }}, lalu konfirmasi lewat WhatsApp. Ketuk <span class="font-bold">Bayar</span> untuk langkah-langkahnya. Status berubah sendiri setelah admin memverifikasi.
+              Bayar {{ formatOngkir(order.price) }} lewat transfer bank, QRIS, atau tunai di gerai. Ketuk <span class="font-bold">Bayar</span> untuk langkah-langkahnya. Status berubah sendiri setelah admin memverifikasi.
             </p>
           </div>
         </div>
@@ -514,7 +584,10 @@ async function cancel() {
               {{ order.courier }}
             </p>
           </div>
-          <p class="ml-2 shrink-0 text-xl font-extrabold text-white">
+          <p
+            v-if="order.price !== null"
+            class="ml-2 shrink-0 text-xl font-extrabold text-white"
+          >
             {{ formatRupiah(order.price) }}
           </p>
         </div>
@@ -527,6 +600,7 @@ async function cancel() {
       />
 
       <RiwayatPaymentSteps
+        v-if="!menungguHarga"
         v-model:open="showPayment"
         :order="order"
       />
@@ -551,8 +625,22 @@ async function cancel() {
           />
           <span class="pointer-events-none">Batalkan</span>
         </button>
+        <a
+          v-if="menungguHarga && hargaChatUrl"
+          v-ripple
+          :href="hargaChatUrl"
+          target="_blank"
+          rel="noopener"
+          class="flex flex-[1.6] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#25D366] py-3.5 text-base font-bold text-white shadow-lg shadow-[#25D366]/25 hover:bg-[#1ebe5b]"
+        >
+          <UIcon
+            name="i-simple-icons-whatsapp"
+            class="size-5 shrink-0 pointer-events-none"
+          />
+          <span class="truncate pointer-events-none">Konfirmasi via WhatsApp</span>
+        </a>
         <button
-          v-if="belumBayar"
+          v-else-if="belumBayar"
           type="button"
           class="relative flex flex-[1.6] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-linear-135 from-[#002144] via-[#003366] to-[#004080] py-3.5 text-base font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60"
           :disabled="pending || !online"
@@ -568,7 +656,7 @@ async function cancel() {
             class="relative z-10 size-5 shrink-0 pointer-events-none"
           />
           <span class="relative z-10 truncate pointer-events-none">
-            {{ !online ? 'Butuh koneksi' : `Bayar ${formatRupiah(order.price)}` }}
+            {{ !online ? 'Butuh koneksi' : `Bayar ${formatOngkir(order.price)}` }}
           </span>
         </button>
         <!-- Never touches the server, so it stays usable offline. -->

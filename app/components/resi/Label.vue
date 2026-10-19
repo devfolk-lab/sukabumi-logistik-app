@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Area, Order, Party } from '~/types'
-import logoFull from '~/assets/img/logo-full.png'
+import logo from '~/assets/img/logo.png'
 
 /**
  * The 100 × 150 mm shipping label for one order: carrier and our logo, a
@@ -11,7 +11,8 @@ const props = defineProps<{
   order: Order
 }>()
 
-const barcode = computed(() => props.order.awb ? code128(props.order.awb) : null)
+// `resi` is the carrier's AWB, or our order number for Antar Langsung, which has none.
+const barcode = computed(() => props.order.resi ? code128(props.order.resi) : null)
 
 /** "SUKABUMI - JAKARTA BARAT" — the sort line in the black box. */
 const sortLine = computed(() => [props.order.origin, props.order.destination]
@@ -30,16 +31,17 @@ function addressLines(party: Party, area: Area): string[] {
   <!-- Sized in millimetres so it prints true to size. -->
   <article class="label mx-auto w-[100mm] max-w-full border border-black bg-white text-[9pt] leading-tight text-black print:max-w-none">
     <!-- Carrier | us -->
-    <div class="grid grid-cols-[1fr_1.6fr] items-center border-b border-black">
-      <div class="flex h-[16mm] items-center justify-center border-r border-black p-[2mm]">
+    <div class="grid grid-cols-2 items-center border-b border-black">
+      <div class="flex h-[20mm] items-center justify-center border-r border-black p-[1.5mm]">
         <AppCourierLogo
           :code="order.courierCode"
-          class="h-full w-full text-[10pt]"
+          flush
+          class="h-full w-full text-[12pt] ring-0!"
         />
       </div>
-      <div class="flex h-[16mm] items-center justify-center p-[2mm]">
+      <div class="flex h-[20mm] items-center justify-center p-[1.5mm]">
         <img
-          :src="logoFull"
+          :src="logo"
           alt="Sukabumi Logistik"
           class="max-h-full w-auto object-contain"
         >
@@ -54,7 +56,7 @@ function addressLines(party: Party, area: Area): string[] {
         preserveAspectRatio="none"
         class="h-[14mm] w-full"
         role="img"
-        :aria-label="`Barcode resi ${order.awb}`"
+        :aria-label="`Barcode resi ${order.resi}`"
       >
         <rect
           v-for="(bar, index) in barcode.bars"
@@ -67,7 +69,7 @@ function addressLines(party: Party, area: Area): string[] {
         />
       </svg>
       <p class="mt-[1.5mm] text-[11pt] font-semibold">
-        Nomor Resi - <span class="font-mono font-bold">{{ order.awb }}</span>
+        Nomor Resi - <span class="font-mono font-bold">{{ order.resi }}</span>
       </p>
     </div>
 

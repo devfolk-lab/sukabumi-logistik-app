@@ -119,8 +119,10 @@ export function toAdminOrder(o: AdminOrderRow): AdminOrder {
     ...toDomainOrder(o),
     customer: o.profile,
     createdAt: o.createdAt.toISOString(),
-    approvedAt: o.approvedAt && o.biteshipOrderId ? formatWaktu(o.approvedAt) : null,
-    approvedBy: o.biteshipOrderId && o.approvedBy ? o.approvedBy.profile?.nama || o.approvedBy.email : null,
+    // `approvedAt` is also a claim in progress; only a paid order was approved.
+    approvedAt: o.approvedAt && o.paidAt ? formatWaktu(o.approvedAt) : null,
+    approvedBy: o.paidAt && o.approvedBy ? o.approvedBy.profile?.nama || o.approvedBy.email : null,
+    paymentMethod: paymentMethodLabel(o.paymentMethod),
     biteshipStatus: o.biteshipStatus
   }
 }
@@ -152,7 +154,7 @@ function stageTimeline(o: Order): TimelineStep[] {
 }
 
 /** The carrier's note, unless it only repeats the title. */
-function extraNote(title: string, note: string | null | undefined): string | undefined {
+export function extraNote(title: string, note: string | null | undefined): string | undefined {
   const text = note?.trim()
   return text && text.toLowerCase() !== title.toLowerCase() ? text : undefined
 }
@@ -192,7 +194,7 @@ function eventTimeline(o: Order, events: TrackingEvent[]): TimelineStep[] {
   return steps
 }
 
-function etaText(o: Order): string {
+export function etaText(o: Order): string {
   if (o.status === 'SELESAI') return `Diterima ${formatWaktu(o.updatedAt)}`
   if (o.status === 'BATAL') return 'Pesanan dibatalkan'
   if (o.status === 'MENUNGGU_PEMBAYARAN') return 'Menunggu pembayaran'

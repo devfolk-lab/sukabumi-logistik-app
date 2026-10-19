@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import logoFull from '~/assets/img/logo-full.png'
+import logo from '~/assets/img/logo.png'
 
 withDefaults(defineProps<{ variant?: 'full' | 'mark' }>(), { variant: 'full' })
 </script>
@@ -7,7 +7,7 @@ withDefaults(defineProps<{ variant?: 'full' | 'mark' }>(), { variant: 'full' })
 <template>
   <img
     v-if="variant === 'full'"
-    :src="logoFull"
+    :src="logo"
     alt="Sukabumi Logistik"
     class="h-auto w-auto"
   >
